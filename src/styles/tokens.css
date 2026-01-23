@@ -1,0 +1,96 @@
+/* Halqati Design Tokens */
+:root {
+    /* Colors */
+    --color-sand: #F6F1E7;
+    --color-surface: #FFFCF6;
+    --color-emerald: #0F3D2E;
+    --color-emerald-deep: #0A2A20;
+    --color-gold: #C7A14A;
+    --color-gold-light: #D4B86A;
+    --color-border: rgba(15, 61, 46, 0.12);
+    --color-border-strong: rgba(15, 61, 46, 0.25);
+    --color-text: #0B1220;
+    --color-text-muted: rgba(11, 18, 32, 0.65);
+    --color-text-light: rgba(11, 18, 32, 0.45);
+
+    /* Status Colors */
+    --color-success: #16A34A;
+    --color-warning: #EAB308;
+    --color-error: #DC2626;
+    --color-info: #0EA5E9;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(15, 61, 46, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(15, 61, 46, 0.08), 0 2px 4px -2px rgba(15, 61, 46, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(15, 61, 46, 0.08), 0 4px 6px -4px rgba(15, 61, 46, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(15, 61, 46, 0.1), 0 8px 10px -6px rgba(15, 61, 46, 0.05);
+    --shadow-gold: 0 0 0 1px rgba(199, 161, 74, 0.1), 0 4px 12px rgba(199, 161, 74, 0.15);
+
+    /* Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+
+    /* Spacing (8px base) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* Typography */
+    --font-family: 'Tajawal', sans-serif;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 200ms ease;
+    --transition-slow: 300ms ease;
+    --transition-spring: 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Ornament Pattern Classes */
+.ornament-bg {
+    position: relative;
+}
+
+.ornament-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L35 15L50 15L38 24L42 40L30 30L18 40L22 24L10 15L25 15L30 0Z' fill='%230F3D2E'/%3E%3C/svg%3E");
+    background-size: 30px 30px;
+    pointer-events: none;
+}
+
+.ornament-bg::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 150px;
+    height: 150px;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L35 15L50 15L38 24L42 40L30 30L18 40L22 24L10 15L25 15L30 0Z' fill='%230F3D2E'/%3E%3C/svg%3E");
+    background-size: 30px 30px;
+    pointer-events: none;
+    transform: rotate(180deg);
+}

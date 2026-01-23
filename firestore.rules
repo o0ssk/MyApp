@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. USERS: Allow all auth users to read (directory), only owner can write
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 2. TASKS: Student sees their own, Teacher sees tasks where they are the teacher
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid || 
+        resource.data.teacherId == request.auth.uid
+      );
+      // Create: Allow if auth (we validate fields in code/backend logic usually)
+      allow create: if isAuthenticated();
+      // Update: Teacher or Student (status updates)
+      allow update: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid || 
+        resource.data.teacherId == request.auth.uid
+      );
+      allow delete: if isAuthenticated() && resource.data.teacherId == request.auth.uid;
+    }
+    
+    // Quick Fix for other collections to ensure app works (Refine later):
+    match /circles/{circleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Should be restricted to teacher/admin in production
+    }
+    match /circleMembers/{memberId} {
+      allow read, write: if isAuthenticated();
+    }
+    match /logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+    match /approvals/{approvalId} {
+      allow read, write: if isAuthenticated();
+    }
+    // Messaging Rules
+    match /threads/{threadId} {
+      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+      }
+      match /members/{memberId} {
+         allow read, write: if isAuthenticated();
+      }
+    }
+  }
+}

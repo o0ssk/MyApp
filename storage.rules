@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user matches the userId
+    function isUser(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Profile images:
+    // Read: All authenticated users (so Sheikhs can see Students and vice versa)
+    // Write: Only the owner of the folder
+    match /profile_images/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isUser(userId)
+                   && request.resource.size < 2 * 1024 * 1024 // Max 2MB
+                   && request.resource.contentType.matches('image/.*'); // Images only
+    }
+  }
+}

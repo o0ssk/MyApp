@@ -1,0 +1,613 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import {
+    BookOpen,
+    RotateCcw,
+    Plus,
+    Clock,
+    RefreshCw,
+    Users,
+    ChevronLeft,
+} from "lucide-react";
+import {
+    LineChart,
+    Line,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    Tooltip,
+    ResponsiveContainer,
+} from "recharts";
+
+import { useAuth } from "@/lib/auth/hooks";
+import { useMembership } from "@/lib/hooks/useMembership";
+import { useTasks, Task } from "@/lib/hooks/useTasks";
+import { useLogs } from "@/lib/hooks/useLogs";
+import { useToast } from "@/components/ui/Toast";
+
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { StatusBadge } from "@/components/ui/Badge";
+import { ProgressRing } from "@/components/ui/ProgressRing";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Modal } from "@/components/ui/Modal";
+import { CardSkeleton, StatSkeleton } from "@/components/ui/Skeleton";
+import { fadeUp, listItem, staggerContainer } from "@/lib/motion";
+
+import { collection, query as firestoreQuery, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
+
+export default function StudentDashboardPage() {
+    const { userProfile } = useAuth();
+    const { activeCircle, hasApprovedMembership, hasPendingMembership, isLoading: membershipLoading } = useMembership();
+    const { memorizationTask, revisionTask, isLoading: tasksLoading, submitTask } = useTasks(activeCircle?.id || null);
+    const { recentLogs, stats, isLoading: logsLoading, addLog } = useLogs(activeCircle?.id || null);
+    const { showToast } = useToast();
+
+    const [showJoinModal, setShowJoinModal] = useState(false);
+    const [showAddLogModal, setShowAddLogModal] = useState(false);
+    const [addLogType, setAddLogType] = useState<"memorization" | "revision">("memorization");
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+    const openAddLogModal = (type: "memorization" | "revision", taskId?: string) => {
+        setAddLogType(type);
+        setSelectedTaskId(taskId || null);
+        setShowAddLogModal(true);
+    };
+
+    const isLoading = membershipLoading || tasksLoading || logsLoading;
+    const monthlyGoal = userProfile?.settings?.goals?.monthlyPagesTarget || 30;
+    const progress = Math.min(stats.totalPagesThisMonth / monthlyGoal, 1);
+
+    // DEBUG: Log all tasks for user to verify visibility
+    useEffect(() => {
+        if (!userProfile?.uid) return;
+        const debugFetch = async () => {
+            console.log("🐛 DEBUG - Fetching ALL tasks for student:", userProfile.uid);
+            try {
+                // Use alias to avoid conflict or just usage strictly
+                const q = firestoreQuery(collection(db, 'tasks'), where('studentId', '==', userProfile.uid));
+                const snap = await getDocs(q);
+                console.log("🐛 DEBUG - ALL TASKS IN DB:", snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            } catch (e) {
+                console.error("🐛 DEBUG - Error fetching tasks:", e);
+            }
+        };
+        debugFetch();
+    }, [userProfile?.uid]);
+
+    return (
+        <div className="max-w-5xl mx-auto px-4 py-6">
+            {/* Greeting */}
+            <div className="mb-6">
+                <h1 className="text-xl font-bold text-emerald-deep">
+                    أهلاً، {userProfile?.name || "طالب"}
+                </h1>
+                {activeCircle && (
+                    <p className="text-sm text-text-muted">{activeCircle.name}</p>
+                )}
+            </div>
+
+            {/* Loading State */}
+            {isLoading && (
+                <div className="space-y-4">
+                    <StatSkeleton />
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <CardSkeleton />
+                        <CardSkeleton />
+                    </div>
+                </div>
+            )}
+
+            {/* No Membership State */}
+            {!isLoading && !hasApprovedMembership && !hasPendingMembership && (
+                <motion.div variants={fadeUp}>
+                    <Card variant="gradient" className="text-center py-12">
+                        <EmptyState
+                            icon={<Users size={40} />}
+                            title="لم تنضم إلى حلقة بعد"
+                            description="انضم إلى حلقة تحفيظ باستخدام رمز الدعوة من شيخك"
+                            action={{
+                                label: "انضم برمز الدعوة",
+                                onClick: () => setShowJoinModal(true),
+                            }}
+                        />
+                    </Card>
+                </motion.div>
+            )}
+
+            {/* Pending Membership State */}
+            {!isLoading && hasPendingMembership && !hasApprovedMembership && (
+                <motion.div variants={fadeUp}>
+                    <Card variant="gold" className="text-center py-8">
+                        <div className="flex flex-col items-center">
+                            <div className="w-16 h-16 bg-gold/20 rounded-full flex items-center justify-center mb-4">
+                                <Clock size={32} className="text-gold" />
+                            </div>
+                            <h3 className="text-xl font-bold text-emerald-deep mb-2">
+                                طلب الانضمام قيد المراجعة
+                            </h3>
+                            <p className="text-text-muted mb-6">
+                                سيتم إعلامك عند قبول طلبك من قبل الشيخ
+                            </p>
+                            <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
+                                <RefreshCw size={16} />
+                                تحديث الحالة
+                            </Button>
+                        </div>
+                    </Card>
+                </motion.div>
+            )}
+
+            {/* Main Dashboard (Approved Membership) */}
+            {!isLoading && hasApprovedMembership && (
+                <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-6"
+                >
+                    {/* Stats Row */}
+                    <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <Card hover>
+                            <div className="text-center">
+                                <div className="text-3xl font-bold text-emerald-deep">{stats.totalPagesThisMonth}</div>
+                                <div className="text-sm text-text-muted">صفحة هذا الشهر</div>
+                            </div>
+                        </Card>
+                        <Card hover>
+                            <div className="text-center">
+                                <div className="text-3xl font-bold text-gold">{stats.totalPagesThisWeek}</div>
+                                <div className="text-sm text-text-muted">صفحة هذا الأسبوع</div>
+                            </div>
+                        </Card>
+                        <Card hover>
+                            <div className="text-center">
+                                <div className="text-3xl font-bold text-emerald">{stats.memorizationPages}</div>
+                                <div className="text-sm text-text-muted">صفحات حفظ</div>
+                            </div>
+                        </Card>
+                        <Card hover>
+                            <div className="text-center">
+                                <div className="text-3xl font-bold text-emerald">{stats.revisionPages}</div>
+                                <div className="text-sm text-text-muted">صفحات مراجعة</div>
+                            </div>
+                        </Card>
+                    </motion.div>
+
+                    {/* Today's Tasks */}
+                    <motion.div variants={fadeUp}>
+                        <h2 className="text-lg font-bold text-emerald-deep mb-4">المهام المطلوبة</h2>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <TaskCard
+                                type="memorization"
+                                task={memorizationTask}
+                                onSubmit={submitTask}
+                                onAddLog={() => openAddLogModal("memorization", memorizationTask?.id)}
+                            />
+                            <TaskCard
+                                type="revision"
+                                task={revisionTask}
+                                onSubmit={submitTask}
+                                onAddLog={() => openAddLogModal("revision", revisionTask?.id)}
+                            />
+                        </div>
+                        {!memorizationTask && !revisionTask && (
+                            <Card className="mt-4">
+                                <EmptyState
+                                    icon={<BookOpen size={32} />}
+                                    title="لا توجد مهام لليوم"
+                                    description="يمكنك إضافة سجل يدوياً"
+                                    action={{
+                                        label: "إضافة سجل يدوياً",
+                                        onClick: () => openAddLogModal("memorization"),
+                                    }}
+                                />
+                            </Card>
+                        )}
+                    </motion.div>
+
+                    {/* Progress & Charts */}
+                    <motion.div variants={fadeUp} className="grid md:grid-cols-2 gap-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>التقدم الشهري</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex items-center justify-center py-4">
+                                <ProgressRing
+                                    progress={progress}
+                                    size={150}
+                                    label={`من ${monthlyGoal} صفحة`}
+                                />
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>الإنجاز الأسبوعي</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-40">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={stats.weeklyData}>
+                                            <XAxis
+                                                dataKey="date"
+                                                tickFormatter={(v) => new Date(v).toLocaleDateString("ar-SA", { weekday: "short" })}
+                                                stroke="#0B1220"
+                                                fontSize={12}
+                                            />
+                                            <YAxis stroke="#0B1220" fontSize={12} />
+                                            <Tooltip
+                                                labelFormatter={(v) => new Date(v).toLocaleDateString("ar-SA")}
+                                                formatter={(v) => [`${v ?? 0} صفحة`, "الإنجاز"]}
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="pages"
+                                                stroke="#C7A14A"
+                                                strokeWidth={2}
+                                                dot={{ fill: "#C7A14A" }}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+
+                    {/* Type Breakdown */}
+                    <motion.div variants={fadeUp}>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>الحفظ مقابل المراجعة</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-32">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={[
+                                            { name: "حفظ", value: stats.typeBreakdown.memorization },
+                                            { name: "مراجعة", value: stats.typeBreakdown.revision },
+                                        ]}>
+                                            <XAxis dataKey="name" stroke="#0B1220" fontSize={12} />
+                                            <YAxis stroke="#0B1220" fontSize={12} />
+                                            <Tooltip formatter={(v) => [`${v ?? 0} صفحة`]} />
+                                            <Bar dataKey="value" fill="#0F3D2E" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+
+                    {/* Recent Activity */}
+                    <motion.div variants={fadeUp}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold text-emerald-deep">النشاط الأخير</h2>
+                            <Link href="/app/log">
+                                <Button variant="ghost" size="sm">
+                                    عرض الكل
+                                    <ChevronLeft size={16} />
+                                </Button>
+                            </Link>
+                        </div>
+                        {recentLogs.length === 0 ? (
+                            <Card>
+                                <EmptyState
+                                    icon={<Clock size={32} />}
+                                    title="لا يوجد نشاط بعد"
+                                    description="ابدأ بتسجيل إنجازك اليوم"
+                                    action={{
+                                        label: "تسجيل إنجاز",
+                                        onClick: () => openAddLogModal("memorization"),
+                                    }}
+                                />
+                            </Card>
+                        ) : (
+                            <motion.div variants={staggerContainer} className="space-y-2">
+                                {recentLogs.map((log) => (
+                                    <motion.div key={log.id} variants={listItem}>
+                                        <Card hover className="flex items-center gap-4 p-4">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.type === "memorization" ? "bg-gold/10 text-gold" : "bg-emerald/10 text-emerald"
+                                                }`}>
+                                                {log.type === "memorization" ? <BookOpen size={20} /> : <RotateCcw size={20} />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-medium text-emerald-deep">
+                                                    {log.type === "memorization" ? "حفظ" : "مراجعة"} {log.amount.pages || 0} صفحة
+                                                </div>
+                                                <div className="text-sm text-text-muted">
+                                                    {new Date(log.createdAt).toLocaleDateString("ar-SA")}
+                                                </div>
+                                            </div>
+                                            <StatusBadge status={log.status} />
+                                        </Card>
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                        )}
+                    </motion.div>
+
+                    {/* Floating Add Button */}
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.5, type: "spring" }}
+                        className="fixed bottom-24 left-6"
+                    >
+                        <Button
+                            variant="gold"
+                            size="lg"
+                            className="rounded-full w-14 h-14 shadow-lg"
+                            onClick={() => openAddLogModal("memorization")}
+                        >
+                            <Plus size={24} />
+                        </Button>
+                    </motion.div>
+                </motion.div>
+            )}
+
+            {/* Modals */}
+            <JoinCircleModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />
+            <AddLogModal
+                isOpen={showAddLogModal}
+                onClose={() => setShowAddLogModal(false)}
+                type={addLogType}
+                circleId={activeCircle?.id || null}
+                onSuccess={() => {
+                    setShowAddLogModal(false);
+                    showToast("تم تسجيل الإنجاز بنجاح", "success");
+                }}
+            />
+        </div>
+    );
+}
+
+// Task Card Component
+function TaskCard({
+    type,
+    task,
+    onSubmit,
+    onAddLog
+}: {
+    type: "memorization" | "revision";
+    task?: Task;
+    onSubmit: (task: Task) => Promise<{ success: boolean; error?: string }>;
+    onAddLog: () => void;
+}) {
+    const isMemorization = type === "memorization";
+    const icon = isMemorization ? <BookOpen size={24} /> : <RotateCcw size={24} />;
+    const title = isMemorization ? "الحفظ" : "المراجعة";
+    const iconBg = isMemorization ? "bg-gold/10 text-gold" : "bg-emerald/10 text-emerald";
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { showToast } = useToast();
+
+    const handleSubmit = async () => {
+        if (!task) return;
+
+        setIsSubmitting(true);
+        const result = await onSubmit(task);
+        setIsSubmitting(false);
+
+        if (result.success) {
+            showToast("تم إرسال الإنجاز للشيخ بنجاح", "success");
+        } else {
+            showToast(result.error || "حدث خطأ أثناء الإرسال", "error");
+        }
+    };
+
+    if (!task) {
+        return (
+            <Card hover className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconBg}`}>{icon}</div>
+                <div className="flex-1">
+                    <div className="font-bold text-emerald-deep">{title}</div>
+                    <div className="text-sm text-text-muted">لا توجد مهام حالياً</div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={onAddLog}>
+                    <Plus size={16} />
+                    تسجيل
+                </Button>
+            </Card>
+        );
+    }
+
+    const targetText = task.target.pages
+        ? `${task.target.pages} صفحة`
+        : `${task.target.surah} (${task.target.ayahFrom}-${task.target.ayahTo})`;
+
+    const isToday = task.dueDate === new Date().toISOString().split("T")[0];
+    const dateDisplay = isToday ? "اليوم" : new Date(task.dueDate).toLocaleDateString("ar-SA", { weekday: "short", day: "numeric", month: "short" });
+
+    return (
+        <Card hover className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconBg}`}>{icon}</div>
+            <div className="flex-1">
+                <div className="flex items-center gap-2">
+                    <span className="font-bold text-emerald-deep">{title}</span>
+                    <StatusBadge status={task.status} />
+                </div>
+                <div className="text-sm text-text-muted">
+                    {targetText}
+                    <span className="mx-2 text-gray-300">|</span>
+                    <span className={isToday ? "text-emerald font-medium" : "text-amber-600"}>{dateDisplay}</span>
+                </div>
+            </div>
+            <div className="flex gap-2">
+                <Button
+                    variant="gold"
+                    size="sm"
+                    onClick={handleSubmit}
+                    isLoading={isSubmitting}
+                >
+                    تسجيل إنجاز
+                </Button>
+                <Link href="/app/log">
+                    <Button variant="ghost" size="sm">السجل</Button>
+                </Link>
+            </div>
+        </Card>
+    );
+}
+
+// Join Circle Modal
+function JoinCircleModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+    const { joinCircleByCode } = useMembership();
+    const { showToast } = useToast();
+    const [code, setCode] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!code.trim()) {
+            setError("الرجاء إدخال رمز الدعوة");
+            return;
+        }
+        setIsLoading(true);
+        setError(null);
+        const result = await joinCircleByCode(code.trim());
+        setIsLoading(false);
+        if (result.success) {
+            showToast("تم إرسال طلب الانضمام بنجاح", "success");
+            onClose();
+            setCode("");
+        } else {
+            setError(result.error || "حدث خطأ");
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="انضم إلى حلقة">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-emerald-deep mb-2">رمز الدعوة</label>
+                    <input
+                        type="text"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                        placeholder="أدخل رمز الدعوة"
+                        className="w-full px-4 py-3 bg-sand border border-border rounded-xl text-text text-center text-lg tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-gold/50"
+                        dir="ltr"
+                        maxLength={8}
+                    />
+                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                </div>
+                <p className="text-sm text-text-muted">احصل على رمز الدعوة من شيخ الحلقة للانضمام</p>
+                <Button type="submit" variant="gold" className="w-full" isLoading={isLoading}>
+                    إرسال طلب الانضمام
+                </Button>
+            </form>
+        </Modal>
+    );
+}
+
+// Add Log Modal
+function AddLogModal({
+    isOpen,
+    onClose,
+    type,
+    circleId,
+    onSuccess,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    type: "memorization" | "revision";
+    circleId: string | null;
+    onSuccess: () => void;
+}) {
+    const { addLog } = useLogs(circleId);
+    const [logType, setLogType] = useState(type);
+    const [pages, setPages] = useState("");
+    const [notes, setNotes] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const pagesNum = parseInt(pages);
+        if (!pagesNum || pagesNum < 1) {
+            setError("الرجاء إدخال عدد صفحات صحيح");
+            return;
+        }
+        setIsLoading(true);
+        setError(null);
+        const result = await addLog({
+            type: logType,
+            amount: { pages: pagesNum },
+            studentNotes: notes || undefined,
+        });
+        setIsLoading(false);
+        if (result.success) {
+            onSuccess();
+            setPages("");
+            setNotes("");
+        } else {
+            setError(result.error || "حدث خطأ");
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="تسجيل إنجاز" size="md">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-emerald-deep mb-2">نوع الإنجاز</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setLogType("memorization")}
+                            className={`p-3 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${logType === "memorization"
+                                ? "border-gold bg-gold/10 text-gold"
+                                : "border-border text-text-muted hover:border-gold/50"
+                                }`}
+                        >
+                            <BookOpen size={18} />
+                            حفظ
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setLogType("revision")}
+                            className={`p-3 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${logType === "revision"
+                                ? "border-emerald bg-emerald/10 text-emerald"
+                                : "border-border text-text-muted hover:border-emerald/50"
+                                }`}
+                        >
+                            <RotateCcw size={18} />
+                            مراجعة
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-emerald-deep mb-2">عدد الصفحات</label>
+                    <input
+                        type="number"
+                        value={pages}
+                        onChange={(e) => setPages(e.target.value)}
+                        placeholder="0"
+                        min="1"
+                        className="w-full px-4 py-3 bg-sand border border-border rounded-xl text-text text-center text-2xl focus:outline-none focus:ring-2 focus:ring-gold/50"
+                        dir="ltr"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-emerald-deep mb-2">ملاحظات (اختياري)</label>
+                    <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="أضف ملاحظات..."
+                        rows={2}
+                        className="w-full px-4 py-3 bg-sand border border-border rounded-xl text-text resize-none focus:outline-none focus:ring-2 focus:ring-gold/50"
+                    />
+                </div>
+                {error && <p className="text-red-500 text-sm">{error}</p>}
+                <Button type="submit" variant="gold" className="w-full" isLoading={isLoading}>
+                    تسجيل الإنجاز
+                </Button>
+            </form>
+        </Modal>
+    );
+}

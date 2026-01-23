@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+
+@layer base {
+  html {
+    direction: rtl;
+  }
+
+  body {
+    background-color: #F6F1E7;
+    color: #0B1220;
+    font-family: 'Tajawal', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+
+  /* Section Padding */
+  .section-padding {
+    @apply px-4 md:px-8 py-16 md:py-24;
+  }
+
+  /* Glass Effect */
+  .glass {
+    @apply bg-surface/80 backdrop-blur-md;
+  }
+
+  /* Card Component */
+  .card {
+    @apply bg-surface rounded-2xl p-6 border border-border shadow-soft;
+  }
+
+  /* Button Components */
+  .btn-primary {
+    @apply bg-emerald text-white font-medium px-6 py-3 rounded-xl transition-all duration-200;
+  }
+
+  .btn-primary:hover {
+    @apply bg-emerald-deep;
+  }
+
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-emerald font-medium px-6 py-3 rounded-xl border border-emerald/20 transition-all duration-200;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-emerald/5 border-emerald/30;
+  }
+
+  .btn-gold {
+    @apply bg-gold text-white font-medium px-8 py-4 rounded-xl transition-all duration-200;
+  }
+
+  .btn-gold:hover {
+    @apply brightness-110 shadow-glow;
+  }
+
+  .btn-gold:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Ornament Patterns (decorative backgrounds) */
+  .ornament-pattern {
+    background-image: radial-gradient(circle at 25% 25%, rgba(15, 61, 46, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(199, 161, 74, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .ornament-pattern-corner {
+    @apply absolute w-96 h-96 pointer-events-none;
+    background: radial-gradient(circle, rgba(199, 161, 74, 0.08) 0%, transparent 70%);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F6F1E7;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 61, 46, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0F3D2E;
+}
+
+/* Safe area for mobile bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
