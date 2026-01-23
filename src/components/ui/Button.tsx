@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 
 interface ButtonProps {
     children: ReactNode;
-    variant?: "primary" | "secondary" | "gold" | "ghost" | "danger";
+    variant?: "primary" | "secondary" | "gold" | "ghost" | "danger" | "outline";
     size?: "sm" | "md" | "lg";
     isLoading?: boolean;
     disabled?: boolean;
@@ -34,6 +34,7 @@ export function Button({
         gold: "bg-gold text-white hover:brightness-110",
         ghost: "bg-transparent text-text-muted hover:bg-sand hover:text-emerald",
         danger: "bg-red-500 text-white hover:bg-red-600",
+        outline: "border border-emerald text-emerald hover:bg-emerald/5",
     };
 
     const sizeClasses = {

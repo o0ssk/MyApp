@@ -116,7 +116,10 @@ async function fetchUserInfo(userId: string): Promise<{ name: string; email?: st
 }
 
 // Hook: Fetch all students across sheikh's circles
-export function useSheikhStudents(circleIds: string[]) {
+// Accepts a single circleId string OR an array of circleIds for flexibility
+export function useSheikhStudents(circleIdInput: string | string[]) {
+    // Normalize to array
+    const circleIds = Array.isArray(circleIdInput) ? circleIdInput : [circleIdInput].filter(Boolean);
     const [students, setStudents] = useState<Student[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

@@ -54,5 +54,23 @@ service cloud.firestore {
          allow read, write: if isAuthenticated();
       }
     }
+
+    // ✅ FIX: Allow Access to Attendance
+    match /attendance/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // ✅ FIX: Allow Access to Excuses
+    match /excuses/{excuseId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Teacher Invites - Allow authenticated read for validation, write restricted
+    match /teacherInvites/{code} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
   }
 }

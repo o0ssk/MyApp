@@ -10,6 +10,7 @@ import {
     BarChart3,
     Settings,
     X,
+    CalendarCheck,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -20,6 +21,7 @@ interface SidebarProps {
 const navItems = [
     { href: "/sheikh/dashboard", label: "الرئيسية", icon: LayoutDashboard },
     { href: "/sheikh/circles", label: "الحلقات", icon: Users },
+    { href: "/sheikh/attendance", label: "التحضير", icon: CalendarCheck },
     { href: "/sheikh/approvals", label: "المراجعات", icon: ClipboardCheck },
     { href: "/sheikh/students", label: "الطلاب", icon: GraduationCap },
     { href: "/sheikh/reports", label: "التقارير", icon: BarChart3 },
