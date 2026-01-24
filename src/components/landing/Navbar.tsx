@@ -11,7 +11,6 @@ const navLinks = [
     { label: "الرئيسية", href: "#hero" },
     { label: "المميزات", href: "#features" },
     { label: "كيف نعمل", href: "#how-it-works" },
-    { label: "آراء", href: "#testimonials" },
     { label: "تواصل", href: "/contact" },
 ];
 

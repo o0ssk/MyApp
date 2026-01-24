@@ -5,7 +5,7 @@ import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import HowItWorks from "@/components/landing/HowItWorks";
-import Testimonials from "@/components/landing/Testimonials";
+// تم حذف استدعاء Testimonials من هنا
 import CTABanner from "@/components/landing/CTABanner";
 import Footer from "@/components/landing/Footer";
 import { pageTransition } from "@/lib/motion";
@@ -22,7 +22,7 @@ export default function LandingPage() {
             <Hero />
             <Features />
             <HowItWorks />
-            <Testimonials />
+            {/* تم حذف مكون <Testimonials /> من هنا */}
             <CTABanner />
             <Footer />
         </motion.main>

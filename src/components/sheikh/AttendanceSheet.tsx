@@ -27,6 +27,8 @@ import { fadeUp, staggerContainer } from "@/lib/motion";
 interface AttendanceSheetProps {
     circleId: string;
     onSaveSuccess?: () => void;
+    selectedDate?: Date;              // جديد: يأتي من الأب
+    onDateChange?: (date: Date) => void; // جديد: لتغيير تاريخ الأب
 }
 
 const STATUS_OPTIONS: { value: AttendanceStatus; label: string; icon: React.ElementType; color: string }[] = [
@@ -36,8 +38,21 @@ const STATUS_OPTIONS: { value: AttendanceStatus; label: string; icon: React.Elem
     { value: "excused", label: "بعذر", icon: AlertCircle, color: "bg-purple-500 text-white" },
 ];
 
-export default function AttendanceSheet({ circleId, onSaveSuccess }: AttendanceSheetProps) {
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+export default function AttendanceSheet({ circleId, onSaveSuccess, selectedDate: externalDate, onDateChange }: AttendanceSheetProps) {
+    const [internalDate, setInternalDate] = useState<Date>(new Date());
+
+    // التاريخ الفعلي هو الذي يأتي من الخارج، أو الداخلي كاحتياط
+    const currentDate = externalDate || internalDate;
+
+    // دالة لتغيير التاريخ
+    const handleDateChange = (newDate: Date) => {
+        if (onDateChange) {
+            onDateChange(newDate); // أخبر الصفحة الرئيسية
+        } else {
+            setInternalDate(newDate); // غيّر الداخلي فقط (احتياط)
+        }
+    };
+
     const [attendance, setAttendance] = useState<Map<string, AttendanceStatus>>(new Map());
     const [pendingExcuses, setPendingExcuses] = useState<Map<string, Excuse>>(new Map());
     const [hasChanges, setHasChanges] = useState(false);
@@ -64,7 +79,7 @@ export default function AttendanceSheet({ circleId, onSaveSuccess }: AttendanceS
         checkPendingExcuse,
     } = useAttendance(circleId);
 
-    const dateKey = formatDateKey(selectedDate);
+    const dateKey = formatDateKey(currentDate);
 
     // Fetch attendance for the selected date
     const loadAttendance = useCallback(async () => {
@@ -112,17 +127,17 @@ export default function AttendanceSheet({ circleId, onSaveSuccess }: AttendanceS
 
     // Navigate to previous/next day
     const goToPreviousDay = () => {
-        const newDate = new Date(selectedDate);
+        const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() - 1);
-        setSelectedDate(newDate);
+        handleDateChange(newDate);
     };
 
     const goToNextDay = () => {
-        const newDate = new Date(selectedDate);
+        const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() + 1);
         // Don't allow future dates
         if (newDate <= new Date()) {
-            setSelectedDate(newDate);
+            handleDateChange(newDate);
         }
     };
 
@@ -209,8 +224,8 @@ export default function AttendanceSheet({ circleId, onSaveSuccess }: AttendanceS
                         onClick={goToNextDay}
                         disabled={isToday}
                         className={`p-3 rounded-xl transition-colors ${isToday
-                                ? "text-text-muted/30 cursor-not-allowed"
-                                : "text-emerald hover:bg-emerald/10"
+                            ? "text-text-muted/30 cursor-not-allowed"
+                            : "text-emerald hover:bg-emerald/10"
                             }`}
                     >
                         <ChevronRight size={24} />
@@ -218,7 +233,7 @@ export default function AttendanceSheet({ circleId, onSaveSuccess }: AttendanceS
 
                     <div className="text-center">
                         <h2 className="text-xl font-bold text-emerald-deep">
-                            {formatDisplayDate(selectedDate)}
+                            {formatDisplayDate(currentDate)}
                         </h2>
                         {isToday && (
                             <span className="text-sm text-gold">اليوم</span>
@@ -315,8 +330,8 @@ export default function AttendanceSheet({ circleId, onSaveSuccess }: AttendanceS
                                                 key={option.value}
                                                 onClick={() => updateStatus(student.id, option.value)}
                                                 className={`p-2 rounded-lg transition-all ${isActive
-                                                        ? option.color
-                                                        : "bg-sand text-text-muted hover:bg-emerald/10"
+                                                    ? option.color
+                                                    : "bg-sand text-text-muted hover:bg-emerald/10"
                                                     }`}
                                                 title={option.label}
                                             >
@@ -369,8 +384,8 @@ export default function AttendanceSheet({ circleId, onSaveSuccess }: AttendanceS
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         className={`fixed top-20 left-4 right-4 max-w-md mx-auto p-4 rounded-xl shadow-elevated ${saveMessage.type === "success"
-                                ? "bg-emerald text-white"
-                                : "bg-red-500 text-white"
+                            ? "bg-emerald text-white"
+                            : "bg-red-500 text-white"
                             }`}
                     >
                         <div className="flex items-center gap-2">
