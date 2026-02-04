@@ -13,7 +13,10 @@ import {
     UserCheck,
     UserX,
     Loader2,
+    Trash2,
+    Settings,
 } from "lucide-react";
+import Link from "next/link";
 
 import { useSheikhCircles, useCircleMembers, Circle } from "@/lib/hooks/useSheikh";
 import { useToast } from "@/components/ui/Toast";
@@ -271,7 +274,7 @@ function CircleDetailsDrawer({
     circle: Circle;
     onClose: () => void;
 }) {
-    const { pendingMembers, approvedMembers, isLoading, approveMember, rejectMember } =
+    const { pendingMembers, approvedMembers, isLoading, approveMember, rejectMember, removeMember } =
         useCircleMembers(circle.id);
     const { showToast } = useToast();
     const [copied, setCopied] = useState(false);
@@ -305,6 +308,20 @@ function CircleDetailsDrawer({
         }
     };
 
+    const handleRemove = async (memberId: string, userId: string) => {
+        if (!confirm("هل أنت متأكد من إزالة الطالب من هذه الحلقة؟")) return;
+
+        setProcessingId(memberId);
+        const result = await removeMember(memberId, userId);
+        setProcessingId(null);
+
+        if (result.success) {
+            showToast("تم إزالة الطالب بنجاح", "success");
+        } else {
+            showToast(result.error || "فشل في إزالة الطالب", "error");
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -324,12 +341,21 @@ function CircleDetailsDrawer({
                 {/* Header */}
                 <div className="sticky top-0 z-10 bg-surface border-b border-border p-4 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-emerald-deep">{circle.name}</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-sand transition-colors"
-                    >
-                        <X size={20} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href={`/sheikh/circles/${circle.id}/settings`}
+                            className="p-2 rounded-lg hover:bg-sand transition-colors text-text-muted hover:text-emerald"
+                            title="الإعدادات"
+                        >
+                            <Settings size={20} />
+                        </Link>
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-lg hover:bg-sand transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="p-4 space-y-6">
@@ -415,17 +441,32 @@ function CircleDetailsDrawer({
                             <div className="space-y-2">
                                 {approvedMembers.map((member) => (
                                     <Card key={member.id}>
-                                        <CardContent className="flex items-center gap-3 py-3">
-                                            <div className="w-10 h-10 rounded-full bg-emerald/10 flex items-center justify-center">
-                                                <Users size={18} className="text-emerald" />
+                                        <CardContent className="flex items-center justify-between py-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-emerald/10 flex items-center justify-center">
+                                                    <Users size={18} className="text-emerald" />
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium">{member.userName}</span>
+                                                    <p className="text-xs text-text-muted">
+                                                        انضم{" "}
+                                                        {member.approvedAt?.toLocaleDateString("ar-SA") || ""}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <span className="font-medium">{member.userName}</span>
-                                                <p className="text-xs text-text-muted">
-                                                    انضم{" "}
-                                                    {member.approvedAt?.toLocaleDateString("ar-SA") || ""}
-                                                </p>
-                                            </div>
+
+                                            <button
+                                                onClick={() => handleRemove(member.id, member.userId)}
+                                                disabled={processingId === member.id}
+                                                className="p-2 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                                title="إزالة من الحلقة"
+                                            >
+                                                {processingId === member.id ? (
+                                                    <Loader2 size={18} className="animate-spin" />
+                                                ) : (
+                                                    <Trash2 size={18} />
+                                                )}
+                                            </button>
                                         </CardContent>
                                     </Card>
                                 ))}

@@ -6,6 +6,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import AttendanceSheet from "@/components/sheikh/AttendanceSheet";
 import { AttendanceAnalytics } from "@/components/sheikh/AttendanceAnalytics";
+import ExcuseReviewTable from "@/components/sheikh/ExcuseReviewTable";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
 export default function AttendancePage() {
@@ -26,10 +27,10 @@ export default function AttendancePage() {
 
             try {
                 setCheckingCircle(true);
-                // Query circles where this user is the teacher
+                // Query circles where this user is in sheikhIds
                 const q = query(
                     collection(db, "circles"),
-                    where("teacherId", "==", user.uid)
+                    where("sheikhIds", "array-contains", user.uid)
                 );
 
                 const snapshot = await getDocs(q);
@@ -37,7 +38,7 @@ export default function AttendancePage() {
                 if (!snapshot.empty) {
                     setCircleId(snapshot.docs[0].id);
                 } else {
-                    // Fallback: try sheikhId if teacherId doesn't work (for older circles)
+                    // Fallback: try teacherId/sheikhId if array query empty (for backward compatibility)
                     const q2 = query(
                         collection(db, "circles"),
                         where("sheikhId", "==", user.uid)
@@ -102,6 +103,9 @@ export default function AttendancePage() {
                     onDateChange={setSelectedDate}
                 />
             </div>
+
+            {/* 3. جدول الأعذار المقدمة */}
+            <ExcuseReviewTable circleId={circleId} />
         </div>
     );
 }

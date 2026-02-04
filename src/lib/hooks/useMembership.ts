@@ -28,7 +28,8 @@ export interface CircleMembership {
 export interface Circle {
     id: string;
     name: string;
-    teacherId: string;
+    sheikhIds: string[]; // Updated to array
+    teacherId?: string; // Legacy
     inviteCode: string;
     settings?: Record<string, any>;
     schedule?: string;
@@ -74,6 +75,7 @@ export function useMembership() {
                             setActiveCircle({
                                 id: circleSnap.id,
                                 name: circleSnap.data().name || "حلقة",
+                                sheikhIds: circleSnap.data().sheikhIds || (circleSnap.data().sheikhId ? [circleSnap.data().sheikhId] : [circleSnap.data().teacherId]),
                                 teacherId: circleSnap.data().teacherId,
                                 inviteCode: circleSnap.data().inviteCode,
                                 settings: circleSnap.data().settings,

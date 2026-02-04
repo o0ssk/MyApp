@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Search, X, MessageSquare, UserCheck } from "lucide-react";
+import { Search, X, MessageSquare, UserCheck, Users } from "lucide-react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 
 import { useThreads, useCreateThread } from "@/lib/hooks/useMessages";
 import { useMembership } from "@/lib/hooks/useMembership";
 import { useToast } from "@/components/ui/Toast";
 
-import { Card } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ThreadCard, ThreadCardSkeleton } from "@/components/messages/ThreadCard";
-import { staggerContainer, fadeUp, pageTransition } from "@/lib/motion";
+import { StudentAvatar } from "@/components/ui/StudentAvatar";
+import { StudentBadge } from "@/components/ui/StudentBadge";
+import { staggerContainer, fadeUp, pageTransition, listItem } from "@/lib/motion";
+
+interface SheikhInfo {
+    id: string;
+    name: string;
+    photoURL?: string;
+    equippedBadge?: string;
+    equippedFrame?: string;
+}
 
 export default function MessagesPage() {
     const router = useRouter();
@@ -23,22 +35,62 @@ export default function MessagesPage() {
     const { showToast } = useToast();
 
     const [searchQuery, setSearchQuery] = useState("");
+    const [sheikhs, setSheikhs] = useState<SheikhInfo[]>([]);
+    const [loadingSheikhs, setLoadingSheikhs] = useState(false);
+    const [messagingSheikhId, setMessagingSheikhId] = useState<string | null>(null);
+
+    // Fetch all sheikh info
+    useEffect(() => {
+        const fetchSheikhs = async () => {
+            if (!activeCircle?.sheikhIds?.length) {
+                setSheikhs([]);
+                return;
+            }
+
+            setLoadingSheikhs(true);
+            const sheikhData: SheikhInfo[] = [];
+
+            for (const sheikhId of activeCircle.sheikhIds) {
+                try {
+                    const userDoc = await getDoc(doc(db, "users", sheikhId));
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        sheikhData.push({
+                            id: sheikhId,
+                            name: data.name || "شيخ",
+                            photoURL: data.photoURL,
+                            equippedBadge: data.equippedBadge,
+                            equippedFrame: data.equippedFrame,
+                        });
+                    }
+                } catch (err) {
+                    console.error("Error fetching sheikh:", err);
+                }
+            }
+
+            setSheikhs(sheikhData);
+            setLoadingSheikhs(false);
+        };
+
+        fetchSheikhs();
+    }, [activeCircle?.sheikhIds]);
 
     // Filter threads by search
     const filteredThreads = threads.filter((t) =>
         t.otherUserName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Get teacher ID from active circle
-    const teacherId = activeCircle?.teacherId;
-
-    const handleMessageSheikh = async () => {
-        if (!teacherId) {
+    // Handle message sheikh
+    const handleMessageSheikh = async (sheikhId: string) => {
+        if (!sheikhId) {
             showToast("لا يوجد شيخ مرتبط بالحلقة", "error");
             return;
         }
 
-        const result = await createOrOpenThread(teacherId, activeCircle?.id);
+        setMessagingSheikhId(sheikhId);
+        const result = await createOrOpenThread(sheikhId, activeCircle?.id);
+        setMessagingSheikhId(null);
+
         if (result.success && result.threadId) {
             router.push(`/app/messages/${result.threadId}`);
         } else {
@@ -49,6 +101,8 @@ export default function MessagesPage() {
     const handleOpenThread = (threadId: string) => {
         router.push(`/app/messages/${threadId}`);
     };
+
+    const hasSheikhs = sheikhs.length > 0;
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-6">
@@ -62,19 +116,8 @@ export default function MessagesPage() {
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h1 className="text-xl font-bold text-emerald-deep">الرسائل</h1>
-                        <p className="text-sm text-text-muted">محادثاتك مع شيخ الحلقة</p>
+                        <p className="text-sm text-text-muted">محادثاتك مع مشايخ الحلقة</p>
                     </div>
-                    {teacherId && (
-                        <Button
-                            variant="gold"
-                            size="sm"
-                            onClick={handleMessageSheikh}
-                            isLoading={isCreating}
-                        >
-                            <UserCheck size={16} />
-                            مراسلة الشيخ
-                        </Button>
-                    )}
                 </div>
 
                 {/* Search */}
@@ -101,6 +144,58 @@ export default function MessagesPage() {
                     </div>
                 )}
             </motion.div>
+
+            {/* Sheikhs List - Quick Contact */}
+            {hasSheikhs && (
+                <motion.div
+                    variants={fadeUp}
+                    initial="hidden"
+                    animate="visible"
+                    className="mb-6"
+                >
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Users size={18} className="text-gold" />
+                                مشايخ الحلقة
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-wrap gap-3">
+                                {sheikhs.map((sheikh) => (
+                                    <motion.button
+                                        key={sheikh.id}
+                                        variants={listItem}
+                                        onClick={() => handleMessageSheikh(sheikh.id)}
+                                        disabled={isCreating}
+                                        className="flex items-center gap-3 p-3 bg-sand/50 hover:bg-sand rounded-xl transition-colors disabled:opacity-50"
+                                    >
+                                        <StudentAvatar
+                                            student={{
+                                                name: sheikh.name,
+                                                photoURL: sheikh.photoURL,
+                                                equippedFrame: sheikh.equippedFrame,
+                                                equippedBadge: sheikh.equippedBadge,
+                                            }}
+                                            size="sm"
+                                        />
+                                        <div className="text-right">
+                                            <p className="font-bold text-emerald-deep text-sm flex items-center gap-1">
+                                                {sheikh.name}
+                                                <StudentBadge badgeId={sheikh.equippedBadge} size="sm" />
+                                            </p>
+                                            <p className="text-xs text-text-muted">مراسلة</p>
+                                        </div>
+                                        {messagingSheikhId === sheikh.id && (
+                                            <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                                        )}
+                                    </motion.button>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            )}
 
             {/* Content */}
             <motion.div
@@ -138,17 +233,14 @@ export default function MessagesPage() {
                         <EmptyState
                             icon={<MessageSquare size={40} />}
                             title="لا توجد رسائل بعد"
-                            description={teacherId ? "ابدأ محادثة مع شيخ الحلقة" : "لا توجد حلقة نشطة للتواصل"}
+                            description={hasSheikhs ? "اختر أحد المشايخ أعلاه لبدء محادثة" : "لا توجد حلقة نشطة للتواصل"}
                             action={
-                                teacherId
+                                !hasSheikhs
                                     ? {
-                                        label: "مراسلة الشيخ",
-                                        onClick: handleMessageSheikh,
-                                    }
-                                    : {
                                         label: "العودة للوحة التحكم",
-                                        onClick: () => router.push("/app/dashboard"),
+                                        onClick: () => router.push("/student"),
                                     }
+                                    : undefined
                             }
                         />
                     </Card>

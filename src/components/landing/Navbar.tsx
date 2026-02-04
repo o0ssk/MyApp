@@ -6,6 +6,8 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useAuth, useDashboardRoute } from "@/hooks/useAuth";
 import { buttonMotion } from "@/lib/motion";
+import { LandingCenterNav } from "@/components/layout/LandingCenterNav";
+import { ModeToggle } from "@/components/mode-toggle";
 
 const navLinks = [
     { label: "الرئيسية", href: "#hero" },
@@ -54,7 +56,7 @@ export default function Navbar() {
             animate={{ y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-                ? "glass py-3 shadow-soft"
+                ? "glass py-3 shadow-soft dark:bg-black/80"
                 : "bg-transparent py-5"
                 }`}
         >
@@ -67,25 +69,17 @@ export default function Navbar() {
                             alt="حلقتي"
                             className="w-10 h-10 rounded-xl object-cover"
                         />
-                        <span className="text-xl font-bold text-emerald">حلقتي</span>
+                        <span className="text-xl font-bold text-emerald dark:text-emerald-400">حلقتي</span>
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center gap-8">
-                        {navLinks.map((link) => (
-                            <a
-                                key={link.label}
-                                href={link.href}
-                                onClick={(e) => handleNavClick(e, link.href)}
-                                className="text-text-muted hover:text-emerald transition-colors duration-200 font-medium"
-                            >
-                                {link.label}
-                            </a>
-                        ))}
+                    <div className="hidden md:flex items-center justify-center">
+                        <LandingCenterNav />
                     </div>
 
                     {/* CTA Buttons */}
                     <div className="hidden md:flex items-center gap-3">
+                        <ModeToggle />
                         <Link
                             href="/login"
                             className="btn-secondary text-sm"

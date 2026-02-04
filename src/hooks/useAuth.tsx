@@ -21,6 +21,6 @@ export function useDashboardRoute(): string {
     if (userProfile?.role === "sheikh") {
         return "/sheikh/dashboard";
     }
-    return "/app/dashboard";
+    return "/student";
 }
 

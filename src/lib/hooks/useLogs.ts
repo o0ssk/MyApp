@@ -52,6 +52,9 @@ export interface LogStats {
     revisionPages: number;
     weeklyData: { date: string; pages: number }[];
     typeBreakdown: { memorization: number; revision: number };
+    // Chart-specific data
+    monthlyChartData: { day: number; memorized: number; revised: number }[];
+    weeklyChartData: { day: string; memorized: number; revised: number }[];
 }
 
 const PAGE_SIZE = 10;
@@ -77,6 +80,27 @@ function getLast7Days(): string[] {
     }
     return days;
 }
+
+function getLast30Days(): { date: string; day: number }[] {
+    const days: { date: string; day: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push({ date: d.toISOString().split("T")[0], day: d.getDate() });
+    }
+    return days;
+}
+
+// Arabic day names
+const ARABIC_DAYS: Record<number, string> = {
+    0: "الأحد",
+    1: "الإثنين",
+    2: "الثلاثاء",
+    3: "الأربعاء",
+    4: "الخميس",
+    5: "الجمعة",
+    6: "السبت",
+};
 
 function getToday(): string {
     return new Date().toISOString().split("T")[0];
@@ -243,6 +267,7 @@ export function useLogsWithFilters(circleId: string | null) {
         const startOfMonth = getStartOfMonth();
         const startOfWeek = getStartOfWeek();
         const last7Days = getLast7Days();
+        const last30Days = getLast30Days();
 
         let monthlyPages = 0;
         let weeklyPages = 0;
@@ -250,6 +275,21 @@ export function useLogsWithFilters(circleId: string | null) {
         let revPages = 0;
         const dailyMap: Record<string, number> = {};
         last7Days.forEach((d) => (dailyMap[d] = 0));
+
+        // Chart data maps
+        const monthlyMemMap: Record<string, number> = {};
+        const monthlyRevMap: Record<string, number> = {};
+        last30Days.forEach((d) => {
+            monthlyMemMap[d.date] = 0;
+            monthlyRevMap[d.date] = 0;
+        });
+
+        const weeklyMemMap: Record<string, number> = {};
+        const weeklyRevMap: Record<string, number> = {};
+        last7Days.forEach((d) => {
+            weeklyMemMap[d] = 0;
+            weeklyRevMap[d] = 0;
+        });
 
         allLogs.forEach((log) => {
             if (log.status !== "approved") return;
@@ -264,6 +304,42 @@ export function useLogsWithFilters(circleId: string | null) {
             if (dailyMap[log.date] !== undefined) {
                 dailyMap[log.date] += pages;
             }
+
+            // Monthly chart data
+            if (monthlyMemMap[log.date] !== undefined) {
+                if (log.type === "memorization") {
+                    monthlyMemMap[log.date] += pages;
+                } else {
+                    monthlyRevMap[log.date] += pages;
+                }
+            }
+
+            // Weekly chart data
+            if (weeklyMemMap[log.date] !== undefined) {
+                if (log.type === "memorization") {
+                    weeklyMemMap[log.date] += pages;
+                } else {
+                    weeklyRevMap[log.date] += pages;
+                }
+            }
+        });
+
+        // Build monthly chart data
+        const monthlyChartData = last30Days.map((d) => ({
+            day: d.day,
+            memorized: monthlyMemMap[d.date] || 0,
+            revised: monthlyRevMap[d.date] || 0,
+        }));
+
+        // Build weekly chart data with Arabic day names
+        const weeklyChartData = last7Days.map((dateStr) => {
+            const date = new Date(dateStr);
+            const dayName = ARABIC_DAYS[date.getDay()] || dateStr;
+            return {
+                day: dayName,
+                memorized: weeklyMemMap[dateStr] || 0,
+                revised: weeklyRevMap[dateStr] || 0,
+            };
         });
 
         return {
@@ -273,6 +349,8 @@ export function useLogsWithFilters(circleId: string | null) {
             revisionPages: revPages,
             weeklyData: last7Days.map((d) => ({ date: d, pages: dailyMap[d] || 0 })),
             typeBreakdown: { memorization: memPages, revision: revPages },
+            monthlyChartData,
+            weeklyChartData,
         };
     })();
 

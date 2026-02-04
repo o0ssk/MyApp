@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -11,17 +11,14 @@ import {
     RefreshCw,
     Users,
     ChevronLeft,
+    PlusCircle,
+    ClipboardList,
+    CheckCircle2,
 } from "lucide-react";
-import {
-    LineChart,
-    Line,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-} from "recharts";
+
+import StudentHomeCharts from "@/components/student/StudentHomeCharts";
+import GoalTracker from "@/components/student/GoalTracker";
+import HeaderWidget from "@/components/student/HeaderWidget";
 
 import { useAuth } from "@/lib/auth/hooks";
 import { useMembership } from "@/lib/hooks/useMembership";
@@ -40,6 +37,8 @@ import { fadeUp, listItem, staggerContainer } from "@/lib/motion";
 
 import { collection, query as firestoreQuery, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { StudentAvatar } from "@/components/ui/StudentAvatar";
+import { StudentBadge } from "@/components/ui/StudentBadge";
 
 export default function StudentDashboardPage() {
     const { userProfile } = useAuth();
@@ -63,6 +62,16 @@ export default function StudentDashboardPage() {
     const monthlyGoal = userProfile?.settings?.goals?.monthlyPagesTarget || 30;
     const progress = Math.min(stats.totalPagesThisMonth / monthlyGoal, 1);
 
+    // Build chart data from stats
+    const chartData = useMemo(() => ({
+        monthlyChartData: stats.monthlyChartData || [],
+        weeklyChartData: stats.weeklyChartData || [],
+        pieData: [
+            { name: 'الحفظ', value: stats.memorizationPages, color: '#0F3D2E' },
+            { name: 'المراجعة', value: stats.revisionPages, color: '#C7A14A' },
+        ],
+    }), [stats]);
+
     // DEBUG: Log all tasks for user to verify visibility
     useEffect(() => {
         if (!userProfile?.uid) return;
@@ -82,14 +91,39 @@ export default function StudentDashboardPage() {
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-6">
-            {/* Greeting */}
-            <div className="mb-6">
-                <h1 className="text-xl font-bold text-emerald-deep">
-                    أهلاً، {userProfile?.name || "طالب"}
-                </h1>
-                {activeCircle && (
-                    <p className="text-sm text-text-muted">{activeCircle.name}</p>
-                )}
+            {/* Header with Greeting and Widget */}
+            <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-8">
+
+                {/* 1. Profile Section (Right in Desktop RTL / Top in Mobile) */}
+                <div className="w-full md:w-auto flex justify-center md:justify-start order-1">
+                    <div className="flex items-center gap-3 md:gap-4">
+                        <StudentAvatar
+                            student={{
+                                name: userProfile?.name || "طالب",
+                                photoURL: userProfile?.photoURL,
+                                equippedFrame: userProfile?.equippedFrame,
+                                equippedBadge: userProfile?.equippedBadge,
+                                equippedAvatar: userProfile?.equippedAvatar,
+                            }}
+                            size="xl"
+                            className="shadow-sm"
+                        />
+                        <div className="text-center md:text-right">
+                            <h1 className="text-lg md:text-xl font-bold text-emerald-deep flex items-center justify-center md:justify-start gap-2">
+                                أهلاً، {userProfile?.name || "طالب"}
+                                <StudentBadge badgeId={userProfile?.equippedBadge} />
+                            </h1>
+                            {activeCircle && (
+                                <p className="text-xs md:text-sm text-text-muted">{activeCircle.name}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Widget Section (Left in Desktop RTL / Bottom in Mobile) */}
+                <div className="w-full md:w-auto order-2">
+                    <HeaderWidget />
+                </div>
             </div>
 
             {/* Loading State */}
@@ -179,108 +213,99 @@ export default function StudentDashboardPage() {
                         </Card>
                     </motion.div>
 
-                    {/* Today's Tasks */}
+                    {/* Goal Tracker */}
                     <motion.div variants={fadeUp}>
-                        <h2 className="text-lg font-bold text-emerald-deep mb-4">المهام المطلوبة</h2>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <TaskCard
-                                type="memorization"
-                                task={memorizationTask}
-                                onSubmit={submitTask}
-                                onAddLog={() => openAddLogModal("memorization", memorizationTask?.id)}
-                            />
-                            <TaskCard
-                                type="revision"
-                                task={revisionTask}
-                                onSubmit={submitTask}
-                                onAddLog={() => openAddLogModal("revision", revisionTask?.id)}
-                            />
+                        <GoalTracker circleId={activeCircle?.id || null} />
+                    </motion.div>
+
+                    {/* Quick Action Buttons */}
+                    <motion.div variants={fadeUp}>
+                        <h2 className="text-lg font-bold text-emerald-deep mb-4">تسجيل الإنجازات</h2>
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Hifz Action Button */}
+                            <Card
+                                hover
+                                onClick={() => openAddLogModal("memorization")}
+                                className="cursor-pointer group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald to-emerald-deep flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                                        <PlusCircle className="w-7 h-7 text-white" />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-emerald-deep text-lg">تسجيل إنجاز حفظ</div>
+                                        <div className="text-sm text-text-muted">أضف صفحات الحفظ الجديدة</div>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            {/* Review Action Button */}
+                            <Card
+                                hover
+                                onClick={() => openAddLogModal("revision")}
+                                className="cursor-pointer group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gold to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                                        <RefreshCw className="w-7 h-7 text-white" />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-emerald-deep text-lg">تسجيل إنجاز مراجعة</div>
+                                        <div className="text-sm text-text-muted">أضف صفحات المراجعة</div>
+                                    </div>
+                                </div>
+                            </Card>
                         </div>
-                        {!memorizationTask && !revisionTask && (
-                            <Card className="mt-4">
+                    </motion.div>
+
+                    {/* Assigned Tasks Section (Central) */}
+                    <motion.div variants={fadeUp}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-emerald/10 rounded-xl">
+                                    <ClipboardList className="w-5 h-5 text-emerald" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-emerald-deep">المهام المطلوبة اليوم</h2>
+                                    <p className="text-sm text-text-muted">المهام المكلفة من الشيخ</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Tasks List */}
+                        {!memorizationTask && !revisionTask ? (
+                            <Card className="py-8">
                                 <EmptyState
-                                    icon={<BookOpen size={32} />}
+                                    icon={<CheckCircle2 size={40} className="text-emerald" />}
                                     title="لا توجد مهام لليوم"
-                                    description="يمكنك إضافة سجل يدوياً"
-                                    action={{
-                                        label: "إضافة سجل يدوياً",
-                                        onClick: () => openAddLogModal("memorization"),
-                                    }}
+                                    description="لم يكلّفك الشيخ بأي مهام حالياً. يمكنك تسجيل إنجازاتك يدوياً."
                                 />
                             </Card>
+                        ) : (
+                            <div className="space-y-3">
+                                {memorizationTask && (
+                                    <AssignedTaskItem
+                                        task={memorizationTask}
+                                        type="memorization"
+                                        onSubmit={submitTask}
+                                        onAddLog={() => openAddLogModal("memorization", memorizationTask.id)}
+                                    />
+                                )}
+                                {revisionTask && (
+                                    <AssignedTaskItem
+                                        task={revisionTask}
+                                        type="revision"
+                                        onSubmit={submitTask}
+                                        onAddLog={() => openAddLogModal("revision", revisionTask.id)}
+                                    />
+                                )}
+                            </div>
                         )}
                     </motion.div>
 
-                    {/* Progress & Charts */}
-                    <motion.div variants={fadeUp} className="grid md:grid-cols-2 gap-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>التقدم الشهري</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex items-center justify-center py-4">
-                                <ProgressRing
-                                    progress={progress}
-                                    size={150}
-                                    label={`من ${monthlyGoal} صفحة`}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>الإنجاز الأسبوعي</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-40">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={stats.weeklyData}>
-                                            <XAxis
-                                                dataKey="date"
-                                                tickFormatter={(v) => new Date(v).toLocaleDateString("ar-SA", { weekday: "short" })}
-                                                stroke="#0B1220"
-                                                fontSize={12}
-                                            />
-                                            <YAxis stroke="#0B1220" fontSize={12} />
-                                            <Tooltip
-                                                labelFormatter={(v) => new Date(v).toLocaleDateString("ar-SA")}
-                                                formatter={(v) => [`${v ?? 0} صفحة`, "الإنجاز"]}
-                                            />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="pages"
-                                                stroke="#C7A14A"
-                                                strokeWidth={2}
-                                                dot={{ fill: "#C7A14A" }}
-                                            />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-
-                    {/* Type Breakdown */}
+                    {/* Performance Analytics Charts */}
                     <motion.div variants={fadeUp}>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>الحفظ مقابل المراجعة</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-32">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={[
-                                            { name: "حفظ", value: stats.typeBreakdown.memorization },
-                                            { name: "مراجعة", value: stats.typeBreakdown.revision },
-                                        ]}>
-                                            <XAxis dataKey="name" stroke="#0B1220" fontSize={12} />
-                                            <YAxis stroke="#0B1220" fontSize={12} />
-                                            <Tooltip formatter={(v) => [`${v ?? 0} صفحة`]} />
-                                            <Bar dataKey="value" fill="#0F3D2E" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <StudentHomeCharts data={chartData} isLoading={logsLoading} />
                     </motion.div>
 
                     {/* Recent Activity */}
@@ -454,6 +479,97 @@ function TaskCard({
     );
 }
 
+// Assigned Task Item Component (for central list)
+function AssignedTaskItem({
+    task,
+    type,
+    onSubmit,
+    onAddLog
+}: {
+    task: Task;
+    type: "memorization" | "revision";
+    onSubmit: (task: Task) => Promise<{ success: boolean; error?: string }>;
+    onAddLog: () => void;
+}) {
+    const isMemorization = type === "memorization";
+    const icon = isMemorization ? <BookOpen size={20} /> : <RotateCcw size={20} />;
+    const iconBg = isMemorization ? "bg-emerald/10 text-emerald" : "bg-gold/10 text-gold";
+    const typeLabel = isMemorization ? "حفظ" : "مراجعة";
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { showToast } = useToast();
+
+    const handleSubmit = async () => {
+        setIsSubmitting(true);
+        const result = await onSubmit(task);
+        setIsSubmitting(false);
+
+        if (result.success) {
+            showToast("تم إرسال الإنجاز للشيخ بنجاح", "success");
+        } else {
+            showToast(result.error || "حدث خطأ أثناء الإرسال", "error");
+        }
+    };
+
+    // Format target text
+    const targetText = task.target.pages
+        ? `${task.target.pages} صفحة`
+        : task.target.surah
+            ? `${task.target.surah} (آية ${task.target.ayahFrom || 1} - ${task.target.ayahTo || ""})`
+            : "غير محدد";
+
+    // Date display
+    const isToday = task.dueDate === new Date().toISOString().split("T")[0];
+    const dateDisplay = isToday
+        ? "اليوم"
+        : new Date(task.dueDate).toLocaleDateString("ar-SA", { weekday: "short", day: "numeric", month: "short" });
+
+    return (
+        <Card className={`p-4 border-r-4 ${isMemorization ? 'border-r-emerald' : 'border-r-gold'}`}>
+            <div className="flex items-start gap-4">
+                {/* Icon */}
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+                    {icon}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-emerald-deep">{typeLabel}</span>
+                        <StatusBadge status={task.status} />
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${isToday ? "bg-emerald/10 text-emerald" : "bg-amber-100 text-amber-700"}`}>
+                            {dateDisplay}
+                        </span>
+                    </div>
+
+                    {/* Task Details */}
+                    <div className="mt-2 p-3 bg-sand/50 rounded-xl">
+                        <p className="text-emerald-deep font-medium">{targetText}</p>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                    <Button
+                        variant="gold"
+                        size="sm"
+                        onClick={handleSubmit}
+                        isLoading={isSubmitting}
+                    >
+                        <CheckCircle2 size={16} />
+                        <span className="mr-1">إنجاز</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={onAddLog}>
+                        <Plus size={16} />
+                        <span className="mr-1">تسجيل</span>
+                    </Button>
+                </div>
+            </div>
+        </Card>
+    );
+}
+
+// JoinCircleModal and AddLogModal previously defined
 // Join Circle Modal
 function JoinCircleModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const { joinCircleByCode } = useMembership();

@@ -3,9 +3,10 @@
 import { motion } from "framer-motion";
 import { Settings } from "lucide-react";
 
-import { useToast } from "@/components/ui/Toast";
 import { fadeUp } from "@/lib/motion";
 import { ProfileForm } from "@/components/profile/ProfileForm";
+
+import { DeleteAccountZone } from "@/components/ui/DeleteAccountZone";
 
 export default function SettingsPage() {
     return (

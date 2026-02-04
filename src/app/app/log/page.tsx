@@ -119,7 +119,7 @@ export default function LogPage() {
                             description="يجب الانضمام إلى حلقة أولاً لعرض سجلاتك"
                             action={{
                                 label: "العودة للوحة التحكم",
-                                onClick: () => (window.location.href = "/app/dashboard"),
+                                onClick: () => (window.location.href = "/student"),
                             }}
                         />
                     </Card>

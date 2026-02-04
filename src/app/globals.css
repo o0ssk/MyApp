@@ -5,16 +5,149 @@
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
 
 @layer base {
+
+  /* Light Theme (Default) */
+  :root {
+    --background: 246 241 231;
+    /* #F6F1E7 */
+    --foreground: 11 18 32;
+    /* #0B1220 */
+    --surface: 255 252 246;
+    /* #FFFCF6 */
+    --surface-elevated: 255 255 255;
+    /* #FFFFFF */
+    --sand: 246 241 231;
+    /* #F6F1E7 */
+    --border: 15 61 46;
+    /* Base for rgba(15, 61, 46, 0.12) - handled in config or via opacity */
+    --text-muted: 11 18 32;
+    /* Base for rgba(11, 18, 32, 0.65) */
+    --emerald: 15 61 46;
+    /* #0F3D2E */
+    --emerald-deep: 10 42 32;
+    /* #0A2A20 */
+    --gold: 199 161 74;
+    /* #C7A14A */
+    --card-bg: 255 252 246;
+    /* #FFFCF6 */
+  }
+
+  /* Dark Theme - Neutral Zinc */
+  .dark {
+    /* Base: Very dark gray (Zinc-950) - NO blue undertones */
+    --background: 9 9 11;
+    /* #09090b */
+    --foreground: 250 250 250;
+    /* #fafafa */
+
+    /* Cards: Same as bg, relies on borders for separation */
+    --surface: 24 24 27;
+    /* #18181b */
+    --surface-elevated: 39 39 42;
+    /* #27272a */
+    --sand: 24 24 27;
+    /* #18181b */
+    --card-bg: 24 24 27;
+    /* #18181b */
+
+    /* Borders: Subtle neutral gray */
+    --border: 39 39 42;
+    /* #27272a */
+
+    /* Text: Pure white and soft gray */
+    --text-muted: 161 161 170;
+    /* #a1a1aa */
+
+    /* Brand colors - SAME deep emerald as light mode */
+    --emerald: 27 117 87;
+    /* #1b7557 */
+    --emerald-deep: 29 85 68;
+    /* #1d5544 */
+    --gold: 212 168 75;
+    /* #D4A84B */
+  }
+
   html {
     direction: rtl;
   }
 
   body {
-    background-color: #F6F1E7;
-    color: #0B1220;
+    @apply bg-background text-foreground;
     font-family: 'Tajawal', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Dark mode overrides for common elements */
+  .dark .bg-surface {
+    background-color: rgb(var(--surface));
+  }
+
+  .dark .bg-sand {
+    background-color: rgb(var(--sand));
+  }
+
+  .dark .border-border {
+    border-color: rgb(var(--border));
+  }
+
+  .dark .text-text-muted {
+    color: rgb(var(--text-muted));
+  }
+
+  .dark .text-text {
+    color: rgb(var(--foreground));
+  }
+
+  /* Dark mode specific overrides */
+  .dark .text-emerald-deep {
+    color: rgb(var(--emerald));
+  }
+
+  .dark .text-emerald {
+    color: rgb(var(--emerald));
+  }
+
+  .dark .bg-emerald {
+    background-color: rgb(var(--emerald-deep));
+  }
+
+  .dark .bg-emerald-deep {
+    background-color: #0F3D2E;
+  }
+
+  .dark .text-gold {
+    color: rgb(var(--gold));
+  }
+
+  .dark .bg-gold {
+    background-color: rgb(var(--gold));
+  }
+
+  /* Card backgrounds in dark mode */
+  .dark .card,
+  .dark .bg-white {
+    background-color: rgb(var(--card-bg));
+  }
+
+  /* Input fields in dark mode */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: rgb(var(--surface));
+    border-color: rgb(var(--border));
+    color: rgb(var(--foreground));
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: rgb(var(--text-muted));
+  }
+
+  /* Hover states in dark mode */
+  .dark .hover\:bg-sand:hover {
+    background-color: rgb(var(--surface-elevated));
   }
 }
 

@@ -40,6 +40,9 @@ export interface UserProfile {
     };
     createdAt: Date;
     updatedAt: Date;
+    equippedFrame?: string;
+    equippedBadge?: string;
+    equippedAvatar?: string;
 }
 
 interface AuthContextType {
@@ -75,6 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     settings: data.settings,
                     createdAt: data.createdAt?.toDate(),
                     updatedAt: data.updatedAt?.toDate(),
+                    equippedFrame: data.equippedFrame,
+                    equippedBadge: data.equippedBadge,
+                    equippedAvatar: data.equippedAvatar,
                 });
                 return true;
             }
@@ -143,7 +149,7 @@ export function getDashboardRoute(role: UserRole): string {
             return "/sheikh/dashboard";
         case "student":
         default:
-            return "/app/dashboard";
+            return "/student";
     }
 }
 

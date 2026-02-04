@@ -10,7 +10,12 @@ service cloud.firestore {
     // 1. USERS: Allow all auth users to read (directory), only owner can write
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated();
+
+      // Allow access to settings subcollection
+      match /settings/{settingId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // 2. TASKS: Student sees their own, Teacher sees tasks where they are the teacher
@@ -45,10 +50,16 @@ service cloud.firestore {
     }
     // Messaging Rules
     match /threads/{threadId} {
-      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      // Allow read if user is a participant
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      // Allow create if user is in the new participants list
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      // Allow update/delete if user is already a participant
+      allow update, delete: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
       match /messages/{messageId} {
         allow read: if isAuthenticated();
-        allow write: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+        allow write: if isAuthenticated();
       }
       match /members/{memberId} {
          allow read, write: if isAuthenticated();

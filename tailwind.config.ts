@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+    darkMode: ["class"],
     content: [
         "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
         "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,17 +10,22 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                sand: "#F6F1E7",
-                surface: "#FFFCF6",
+                // Dynamic colors (will change with theme)
+                background: "rgb(var(--background) / <alpha-value>)",
+                foreground: "rgb(var(--foreground) / <alpha-value>)",
+
+                // Light theme colors
+                sand: "rgb(var(--sand) / <alpha-value>)",
+                surface: "rgb(var(--surface) / <alpha-value>)",
                 emerald: {
-                    DEFAULT: "#0F3D2E",
-                    deep: "#0A2A20",
+                    DEFAULT: "rgb(var(--emerald) / <alpha-value>)",
+                    deep: "rgb(var(--emerald-deep) / <alpha-value>)",
                 },
-                gold: "#C7A14A",
-                border: "rgba(15,61,46,0.12)",
+                gold: "rgb(var(--gold) / <alpha-value>)",
+                border: "rgb(var(--border) / <alpha-value>)",
                 text: {
-                    DEFAULT: "#0B1220",
-                    muted: "rgba(11,18,32,0.65)",
+                    DEFAULT: "rgb(var(--foreground) / <alpha-value>)",
+                    muted: "rgb(var(--text-muted) / <alpha-value>)",
                 },
                 // Status Colors
                 success: "#16A34A",

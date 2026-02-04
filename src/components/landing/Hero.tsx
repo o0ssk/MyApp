@@ -34,7 +34,7 @@ export default function Hero() {
             <div className="ornament-pattern-corner bottom-0 left-0 rotate-180 opacity-5" />
 
             {/* Gradient Background */}
-            <div className="absolute inset-0 bg-gradient-to-b from-sand via-sand to-surface" />
+            <div className="absolute inset-0 bg-gradient-to-b from-sand via-sand to-surface dark:from-background dark:via-background dark:to-background" />
 
             <div className="relative max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-24">
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -132,7 +132,7 @@ export default function Hero() {
                     >
                         <div className="relative">
                             {/* Main Preview Card */}
-                            <div className="bg-surface rounded-3xl shadow-elevated p-6 border border-border">
+                            <div className="bg-surface dark:bg-zinc-900 rounded-3xl shadow-elevated p-6 border border-border">
                                 {/* Mock Dashboard Header */}
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-3">
@@ -142,7 +142,7 @@ export default function Hero() {
                                             className="w-10 h-10 rounded-xl object-cover"
                                         />
                                         <div>
-                                            <div className="font-bold text-emerald-deep">لوحة التحكم</div>
+                                            <div className="font-bold text-emerald-deep dark:text-emerald-400">لوحة التحكم</div>
                                             <div className="text-xs text-text-muted">مرحباً بك</div>
                                         </div>
                                     </div>
@@ -155,14 +155,14 @@ export default function Hero() {
 
                                 {/* Progress Cards */}
                                 <div className="grid grid-cols-2 gap-4 mb-6">
-                                    <div className="bg-sand rounded-xl p-4">
-                                        <div className="text-2xl font-bold text-emerald">٢٤</div>
+                                    <div className="bg-sand dark:bg-zinc-800 rounded-xl p-4">
+                                        <div className="text-2xl font-bold text-emerald dark:text-emerald-400">٢٤</div>
                                         <div className="text-xs text-text-muted">صفحة محفوظة</div>
                                         <div className="mt-2 h-2 bg-emerald/10 rounded-full overflow-hidden">
                                             <div className="h-full w-3/4 bg-emerald rounded-full" />
                                         </div>
                                     </div>
-                                    <div className="bg-sand rounded-xl p-4">
+                                    <div className="bg-sand dark:bg-zinc-800 rounded-xl p-4">
                                         <div className="text-2xl font-bold text-gold">٩٥%</div>
                                         <div className="text-xs text-text-muted">نسبة الإتقان</div>
                                         <div className="mt-2 h-2 bg-gold/10 rounded-full overflow-hidden">
@@ -172,15 +172,15 @@ export default function Hero() {
                                 </div>
 
                                 {/* Recent Activity */}
-                                <div className="bg-sand rounded-xl p-4">
-                                    <div className="text-sm font-medium text-emerald-deep mb-3">آخر النشاطات</div>
+                                <div className="bg-sand dark:bg-zinc-800 rounded-xl p-4">
+                                    <div className="text-sm font-medium text-emerald-deep dark:text-emerald-400 mb-3">آخر النشاطات</div>
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 bg-emerald/10 rounded-lg flex items-center justify-center">
                                                 <span className="text-emerald text-xs">✓</span>
                                             </div>
                                             <div className="flex-1">
-                                                <div className="text-sm font-medium">سورة البقرة - صفحة ٥</div>
+                                                <div className="text-sm font-medium dark:text-zinc-200">سورة البقرة - صفحة ٥</div>
                                                 <div className="text-xs text-text-muted">منذ ساعتين</div>
                                             </div>
                                         </div>

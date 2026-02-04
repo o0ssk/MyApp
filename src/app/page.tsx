@@ -16,7 +16,7 @@ export default function LandingPage() {
             initial="hidden"
             animate="visible"
             variants={pageTransition}
-            className="min-h-screen"
+            className="min-h-screen bg-[#F6F1E7] dark:bg-[#020817] text-slate-900 dark:text-slate-50"
         >
             <Navbar />
             <Hero />

@@ -8,13 +8,14 @@ import { useState } from "react";
 import { AuthGuard } from "@/lib/auth/guards";
 import { ToastProvider } from "@/components/ui/Toast";
 import { Sidebar } from "@/components/sheikh/Sidebar";
+import { ModeToggleSimple } from "@/components/mode-toggle";
 import "@/styles/tokens.css";
 
 export default function SheikhLayout({ children }: { children: ReactNode }) {
     return (
         <AuthGuard requireAuth requireProfile allowedRoles={["sheikh"]}>
             <ToastProvider>
-                <div className="min-h-screen bg-sand flex">
+                <div className="min-h-screen bg-transparent flex">
                     {/* Desktop Sidebar */}
                     <Sidebar className="hidden lg:flex fixed right-0 top-0 h-screen w-64 z-40 shadow-sm" />
 
@@ -42,7 +43,7 @@ function MobileHeader() {
 
     return (
         <>
-            <header className="lg:hidden sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-border">
+            <header className="lg:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
                 <div className="px-4 py-3 flex items-center justify-between">
                     <Link href="/sheikh/dashboard" className="flex items-center gap-2">
                         <img
@@ -51,18 +52,22 @@ function MobileHeader() {
                             className="w-9 h-9 rounded-lg object-cover"
                         />
                         <div>
-                            <span className="font-bold text-emerald-deep">حلقتي</span>
+                            <span className="font-bold text-emerald-deep dark:text-emerald">حلقتي</span>
                             <span className="text-xs text-gold block">لوحة الشيخ</span>
                         </div>
                     </Link>
 
-                    <button
-                        onClick={() => setIsMenuOpen(true)}
-                        className="p-2 rounded-lg hover:bg-sand transition-colors"
-                        aria-label="القائمة"
-                    >
-                        <Menu size={24} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <ModeToggleSimple />
+
+                        <button
+                            onClick={() => setIsMenuOpen(true)}
+                            className="p-2 rounded-lg hover:bg-surface-elevated transition-colors"
+                            aria-label="القائمة"
+                        >
+                            <Menu size={24} />
+                        </button>
+                    </div>
                 </div>
             </header>
 

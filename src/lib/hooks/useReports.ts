@@ -10,6 +10,7 @@ import {
     doc,
     getDoc,
     Timestamp,
+    onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 
@@ -24,6 +25,9 @@ export interface StudentStats {
     id: string;
     name: string;
     avatar?: string;
+    equippedFrame?: string;
+    equippedBadge?: string;
+    equippedAvatar?: string;
     totalPages: number;
     logsCount: number;
 }
@@ -88,209 +92,279 @@ function getLastNDays(n: number): string[] {
     return dates;
 }
 
-// Hook: Fetch circle stats for a specific month
+// Hook: Fetch circle stats for a specific month (Real-time)
 export function useCircleStats(circleIds: string[], year?: number, month?: number) {
+    // 1. Core State
     const [stats, setStats] = useState<CircleStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Default to current month
+    // 2. Data State
+    const [logsData, setLogsData] = useState<any[]>([]);
+    const [tasksData, setTasksData] = useState<any[]>([]);
+    const [activeMemberIds, setActiveMemberIds] = useState<Set<string>>(new Set());
+
+    // Updated cache type to include equipped items
+    const [usersCache, setUsersCache] = useState<Record<string, {
+        name: string;
+        avatar?: string;
+        equippedFrame?: string;
+        equippedBadge?: string;
+        equippedAvatar?: string;
+    }>>({});
+
+    // 3. Calculation Vars
     const now = new Date();
     const targetYear = year ?? now.getFullYear();
     const targetMonth = month ?? now.getMonth();
 
+    // Stable circle IDs dependency
+    const circleIdsKey = circleIds.slice(0, 10).join(',');
+
+    // 4. Effects
+    // Listen to Data (Logs, Tasks, & Members)
     useEffect(() => {
-        if (circleIds.length === 0) {
+        if (!circleIdsKey) {
             setStats(null);
             setIsLoading(false);
             return;
         }
 
-        const fetchStats = async () => {
-            try {
-                setIsLoading(true);
+        setIsLoading(true);
+        const targetIds = circleIdsKey.split(',');
 
-                const monthStart = getMonthStart(targetYear, targetMonth);
-                const monthEnd = getMonthEnd(targetYear, targetMonth);
-                const weekAgo = new Date();
-                weekAgo.setDate(weekAgo.getDate() - 7);
+        // Queries
+        const logsQ = query(
+            collection(db, "logs"),
+            where("circleId", "in", targetIds),
+            orderBy("createdAt", "desc")
+        );
 
-                // Initialize stats
-                let totalPagesMemorized = 0;
-                let totalPagesRevised = 0;
-                let pendingApprovals = 0;
-                let approvedLogs = 0;
-                let rejectedLogs = 0;
-                let pendingLogs = 0;
-                let completedTasks = 0;
-                let totalTasks = 0;
+        const tasksQ = query(
+            collection(db, "tasks"),
+            where("circleId", "in", targetIds)
+        );
 
-                const dailyMap: Record<string, { memorized: number; revised: number }> = {};
-                const studentPageMap: Record<string, { pages: number; name: string; avatar?: string; logsCount: number }> = {};
-                const activeStudentIds = new Set<string>();
+        const membersQ = query(
+            collection(db, "circleMembers"),
+            where("circleId", "in", targetIds),
+            where("status", "==", "approved")
+        );
 
-                // Initialize last 7 days
-                const last7Days = getLastNDays(7);
-                last7Days.forEach((d) => {
-                    dailyMap[d] = { memorized: 0, revised: 0 };
-                });
+        // Subscriptions
+        const unsubLogs = onSnapshot(logsQ, (snap) => {
+            setLogsData(snap.docs.map(d => d.data()));
+        }, (err) => {
+            console.error("Logs error:", err);
+            // Fallback for missing index
+            if (err.message.includes("index")) {
+                const fallbackQ = query(collection(db, "logs"), where("circleId", "in", targetIds));
+                onSnapshot(fallbackQ, s => setLogsData(s.docs.map(d => d.data())));
+            }
+        });
 
-                // Fetch logs for each circle
-                for (const circleId of circleIds.slice(0, 10)) {
-                    try {
-                        const logsRef = collection(db, "logs");
-                        const logsQuery = query(
-                            logsRef,
-                            where("circleId", "==", circleId),
-                            orderBy("createdAt", "desc")
-                        );
+        const unsubTasks = onSnapshot(tasksQ, (snap) => {
+            setTasksData(snap.docs.map(d => d.data()));
+        });
 
-                        const logsSnap = await getDocs(logsQuery);
+        const unsubMembers = onSnapshot(membersQ, (snap) => {
+            const activeIds = new Set(snap.docs.map(d => d.data().userId));
+            setActiveMemberIds(activeIds);
+        }, (err) => {
+            console.error("Members error:", err);
+        });
 
-                        for (const logDoc of logsSnap.docs) {
-                            const data = logDoc.data();
-                            const createdAt = parseDate(data.createdAt);
-                            const dateStr = formatDate(createdAt);
-                            const pages = data.amount?.pages || 0;
+        return () => {
+            unsubLogs();
+            unsubTasks();
+            unsubMembers();
+        };
+    }, [circleIdsKey]);
 
-                            // Count status
-                            if (data.status === "pending_approval") {
-                                pendingApprovals++;
-                                pendingLogs++;
-                            } else if (data.status === "approved") {
-                                approvedLogs++;
-                            } else if (data.status === "rejected") {
-                                rejectedLogs++;
-                            }
+    // Fetch Users Side-Effect
+    useEffect(() => {
+        if (logsData.length === 0) return;
 
-                            // Only count this month's data for totals
-                            if (createdAt >= monthStart && createdAt <= monthEnd) {
-                                if (data.type === "memorization") {
-                                    totalPagesMemorized += pages;
-                                } else {
-                                    totalPagesRevised += pages;
-                                }
+        // Only fetch users who are active OR have logs (though we might filter logs later, we need names)
+        const uniqueStudentIds = Array.from(new Set(logsData.map((l: any) => l.studentId)));
 
-                                // Track student stats
-                                if (!studentPageMap[data.studentId]) {
-                                    studentPageMap[data.studentId] = { pages: 0, name: "", logsCount: 0 };
-                                }
-                                if (data.status === "approved") {
-                                    studentPageMap[data.studentId].pages += pages;
-                                }
-                                studentPageMap[data.studentId].logsCount++;
-                            }
+        // Identify missing IDs purely based on current cache state
+        const missingIds = uniqueStudentIds.filter(id => id && !usersCache[id]);
 
-                            // Track daily activity for last 7 days
-                            if (dailyMap[dateStr] && data.status === "approved") {
-                                if (data.type === "memorization") {
-                                    dailyMap[dateStr].memorized += pages;
-                                } else {
-                                    dailyMap[dateStr].revised += pages;
-                                }
-                            }
+        if (missingIds.length === 0) return;
 
-                            // Track active students (submitted this week)
-                            if (createdAt >= weekAgo) {
-                                activeStudentIds.add(data.studentId);
-                            }
-                        }
-                    } catch (e: any) {
-                        // Log the error but continue - might be missing index
-                        console.error("Error fetching logs for circle:", circleId, e.message);
-                        if (e.message?.includes("index")) {
-                            console.log("Missing Firestore index. Create it at:", e.message.match(/https:\/\/[^\s]+/)?.[0]);
-                        }
+        let active = true;
+        const fetchMissing = async () => {
+            const newUsers: Record<string, {
+                name: string;
+                avatar?: string;
+                equippedFrame?: string;
+                equippedBadge?: string;
+                equippedAvatar?: string;
+            }> = {};
+            let found = false;
+
+            for (const uid of missingIds) {
+                try {
+                    const snap = await getDoc(doc(db, "users", uid));
+                    if (snap.exists()) {
+                        const d = snap.data();
+                        newUsers[uid] = {
+                            name: d.name || "طالب",
+                            avatar: d.photoURL,
+                            equippedFrame: d.equippedFrame,
+                            equippedBadge: d.equippedBadge,
+                            equippedAvatar: d.equippedAvatar
+                        };
+                        found = true;
                     }
-                }
+                } catch (e) { console.error(e); }
+            }
 
-                // Fetch tasks for each circle
-                for (const circleId of circleIds.slice(0, 10)) {
-                    try {
-                        const tasksRef = collection(db, "tasks");
-                        const tasksQuery = query(
-                            tasksRef,
-                            where("circleId", "==", circleId)
-                        );
-
-                        const tasksSnap = await getDocs(tasksQuery);
-                        tasksSnap.forEach((taskDoc) => {
-                            const data = taskDoc.data();
-                            totalTasks++;
-                            if (data.status === "completed" || data.status === "submitted") {
-                                completedTasks++;
-                            }
-                        });
-                    } catch (e) {
-                        console.error("Error fetching tasks:", e);
-                    }
-                }
-
-                // Fetch user names for top performers
-                const studentIds = Object.keys(studentPageMap);
-                for (const studentId of studentIds) {
-                    try {
-                        const userDoc = await getDoc(doc(db, "users", studentId));
-                        if (userDoc.exists()) {
-                            studentPageMap[studentId].name = userDoc.data().name || "طالب";
-                            studentPageMap[studentId].avatar = userDoc.data().photoURL;
-                        }
-                    } catch (e) {
-                        console.error("Error fetching user:", e);
-                    }
-                }
-
-                // Build daily activity array
-                const dailyActivity: DailyActivity[] = last7Days.map((date) => ({
-                    date,
-                    memorized: dailyMap[date]?.memorized || 0,
-                    revised: dailyMap[date]?.revised || 0,
-                }));
-
-                // Build student stats and sort by pages
-                const allStudentStats: StudentStats[] = Object.entries(studentPageMap)
-                    .map(([id, data]) => ({
-                        id,
-                        name: data.name || "طالب",
-                        avatar: data.avatar,
-                        totalPages: data.pages,
-                        logsCount: data.logsCount,
-                    }))
-                    .sort((a, b) => b.totalPages - a.totalPages);
-
-                const topPerformers = allStudentStats.slice(0, 3);
-
-                // Calculate completion rate
-                const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-                setStats({
-                    totalPagesMemorized,
-                    totalPagesRevised,
-                    activeStudents: activeStudentIds.size,
-                    pendingApprovals,
-                    completedTasks,
-                    totalTasks,
-                    completionRate,
-                    statusBreakdown: {
-                        approved: approvedLogs,
-                        rejected: rejectedLogs,
-                        pending: pendingLogs,
-                    },
-                    dailyActivity,
-                    topPerformers,
-                    allStudentStats,
-                });
-                setError(null);
-            } catch (err: any) {
-                console.error("Fetch stats error:", err);
-                setError("فشل في تحميل الإحصائيات");
-            } finally {
-                setIsLoading(false);
+            if (active && found) {
+                setUsersCache(prev => ({ ...prev, ...newUsers }));
             }
         };
 
-        fetchStats();
-    }, [circleIds.join(","), targetYear, targetMonth]);
+        fetchMissing();
+        return () => { active = false; };
+    }, [logsData.length]);
+
+    // Calculate Stats
+    useEffect(() => {
+        if (!circleIdsKey) return;
+
+        const monthStart = getMonthStart(targetYear, targetMonth);
+        const monthEnd = getMonthEnd(targetYear, targetMonth);
+
+        let totalPagesMemorized = 0;
+        let totalPagesRevised = 0;
+        let pendingApprovals = 0;
+        let approvedLogs = 0;
+        let rejectedLogs = 0;
+        let pendingLogs = 0;
+        let completedTasks = 0;
+        let totalTasks = 0;
+
+        const dailyMap: Record<string, { memorized: number; revised: number }> = {};
+        const studentPageMap: Record<string, {
+            pages: number;
+            name: string;
+            avatar?: string;
+            equippedFrame?: string;
+            equippedBadge?: string;
+            equippedAvatar?: string;
+            logsCount: number
+        }> = {};
+
+        const last7Days = getLastNDays(7);
+        last7Days.forEach((d) => dailyMap[d] = { memorized: 0, revised: 0 });
+
+        // Process Logs
+        logsData.forEach((data) => {
+            // STRICT FILTER: Only include data for currently active students
+            if (!activeMemberIds.has(data.studentId)) return;
+
+            const createdAt = parseDate(data.createdAt);
+            const dateStr = formatDate(createdAt);
+            const pages = data.amount?.pages || 0;
+
+            if (data.status === "pending_approval") {
+                pendingApprovals++;
+                pendingLogs++;
+            } else if (data.status === "approved") {
+                approvedLogs++;
+            } else if (data.status === "rejected") {
+                rejectedLogs++;
+            }
+
+            if (createdAt >= monthStart && createdAt <= monthEnd) {
+                // Charts & Totals: ONLY APPROVED
+                if (data.status === "approved") {
+                    if (data.type === "memorization") totalPagesMemorized += pages;
+                    else totalPagesRevised += pages;
+                }
+
+                if (!studentPageMap[data.studentId]) {
+                    const cached = usersCache[data.studentId];
+                    studentPageMap[data.studentId] = {
+                        pages: 0,
+                        name: cached?.name || "طالب",
+                        avatar: cached?.avatar,
+                        equippedFrame: cached?.equippedFrame,
+                        equippedBadge: cached?.equippedBadge,
+                        equippedAvatar: cached?.equippedAvatar,
+                        logsCount: 0
+                    };
+                } else if (usersCache[data.studentId]) {
+                    studentPageMap[data.studentId].name = usersCache[data.studentId].name;
+                    studentPageMap[data.studentId].avatar = usersCache[data.studentId].avatar;
+                    studentPageMap[data.studentId].equippedFrame = usersCache[data.studentId].equippedFrame;
+                    studentPageMap[data.studentId].equippedBadge = usersCache[data.studentId].equippedBadge;
+                    studentPageMap[data.studentId].equippedAvatar = usersCache[data.studentId].equippedAvatar;
+                }
+
+                if (data.status === "approved") studentPageMap[data.studentId].pages += pages;
+
+                studentPageMap[data.studentId].logsCount++;
+            }
+
+            if (dailyMap[dateStr] && data.status === "approved") {
+                if (data.type === "memorization") dailyMap[dateStr].memorized += pages;
+                else dailyMap[dateStr].revised += pages;
+            }
+        });
+
+        // Process Tasks
+        tasksData.forEach((data) => {
+            // STRICT FILTER: Only include tasks for currently active students
+            if (!activeMemberIds.has(data.studentId)) return;
+
+            totalTasks++;
+            if (data.status === "completed" || data.status === "submitted") completedTasks++;
+        });
+
+        const dailyActivity = last7Days.map((date) => ({
+            date,
+            memorized: dailyMap[date]?.memorized || 0,
+            revised: dailyMap[date]?.revised || 0,
+        }));
+
+        const allStudentStats = Object.entries(studentPageMap)
+            .map(([id, data]) => ({
+                id,
+                name: data.name,
+                avatar: data.avatar,
+                equippedFrame: data.equippedFrame,
+                equippedBadge: data.equippedBadge,
+                equippedAvatar: data.equippedAvatar,
+                totalPages: data.pages,
+                logsCount: data.logsCount,
+            }))
+            .sort((a, b) => b.totalPages - a.totalPages);
+
+        const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+        setStats({
+            totalPagesMemorized,
+            totalPagesRevised,
+            activeStudents: activeMemberIds.size,
+            pendingApprovals,
+            completedTasks,
+            totalTasks,
+            completionRate,
+            statusBreakdown: {
+                approved: approvedLogs,
+                rejected: rejectedLogs,
+                pending: pendingLogs,
+            },
+            dailyActivity,
+            topPerformers: allStudentStats.slice(0, 3),
+            allStudentStats,
+        });
+        setIsLoading(false);
+
+    }, [logsData, tasksData, usersCache, circleIdsKey, targetYear, targetMonth, activeMemberIds]);
 
     return { stats, isLoading, error };
 }

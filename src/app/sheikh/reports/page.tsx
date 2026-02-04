@@ -19,7 +19,9 @@ import {
 import { useSheikhCircles } from "@/lib/hooks/useSheikh";
 import { useCircleStats, exportToCSV } from "@/lib/hooks/useReports";
 import { useToast } from "@/components/ui/Toast";
-import { ReportsAnalytics } from "@/components/sheikh/ReportsAnalytics"; // Import the new component
+import { ReportsAnalytics } from "@/components/sheikh/ReportsAnalytics";
+import { StudentAvatar } from "@/components/ui/StudentAvatar";
+import { StudentBadge } from "@/components/ui/StudentBadge";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -300,8 +302,8 @@ export default function ReportsPage() {
                                                         {/* Rank Badge */}
                                                         <div
                                                             className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm ${index === 0 ? "bg-gradient-to-br from-yellow-400 to-yellow-600"
-                                                                    : index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-500"
-                                                                        : "bg-gradient-to-br from-amber-600 to-amber-800"
+                                                                : index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-500"
+                                                                    : "bg-gradient-to-br from-amber-600 to-amber-800"
                                                                 }`}
                                                         >
                                                             {index + 1}
@@ -309,15 +311,24 @@ export default function ReportsPage() {
 
                                                         {/* Avatar & Name */}
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-12 h-12 rounded-full bg-sand flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
-                                                                {student.avatar ? (
-                                                                    <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <span className="font-bold text-emerald text-lg">{student.name.charAt(0)}</span>
-                                                                )}
+                                                            <div className="w-12 h-12">
+                                                                <StudentAvatar
+                                                                    student={{
+                                                                        name: student.name,
+                                                                        photoURL: student.avatar,
+                                                                        equippedFrame: student.equippedFrame,
+                                                                        equippedBadge: student.equippedBadge,
+                                                                        equippedAvatar: student.equippedAvatar
+                                                                    }}
+                                                                    size="md"
+                                                                    className="w-full h-full"
+                                                                />
                                                             </div>
                                                             <div>
-                                                                <h4 className="font-bold text-emerald-deep group-hover:text-emerald transition-colors">{student.name}</h4>
+                                                                <h4 className="font-bold text-emerald-deep group-hover:text-emerald transition-colors flex items-center gap-1">
+                                                                    {student.name}
+                                                                    <StudentBadge badgeId={student.equippedBadge} size="sm" />
+                                                                </h4>
                                                                 <p className="text-xs text-text-muted">المستوى المتقدم</p>
                                                             </div>
                                                         </div>

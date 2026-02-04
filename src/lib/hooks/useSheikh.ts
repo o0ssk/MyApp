@@ -13,16 +13,20 @@ import {
     doc,
     getDoc,
     serverTimestamp,
+    arrayUnion,
+    arrayRemove,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/hooks";
 
 // Types
+// Types
 export interface Circle {
     id: string;
     name: string;
     description?: string;
-    teacherId: string;
+    sheikhIds: string[]; // Replaces teacherId
+    createdBy: string;   // Tracks original creator
     inviteCode: string;
     schedule?: string;
     assistants?: string[];
@@ -119,10 +123,11 @@ export function useSheikhCircles() {
         }
 
         const circlesRef = collection(db, "circles");
+        // NEW QUERY: Check if user ID is in the sheikhIds array
         const q = query(
             circlesRef,
-            where("teacherId", "==", uid),
-            orderBy("createdAt", "desc")
+            where("sheikhIds", "array-contains", uid)
+            // orderBy("createdAt", "desc") // Removed to avoid index crash
         );
 
         const unsubscribe = onSnapshot(
@@ -132,19 +137,31 @@ export function useSheikhCircles() {
                     id: d.id,
                     name: d.data().name,
                     description: d.data().description,
-                    teacherId: d.data().teacherId,
+                    sheikhIds: d.data().sheikhIds || (d.data().sheikhId ? [d.data().sheikhId] : [d.data().teacherId]), // Fallback for backward compatibility
+                    createdBy: d.data().createdBy || d.data().teacherId,
                     inviteCode: d.data().inviteCode,
                     schedule: d.data().schedule,
                     assistants: d.data().assistants,
                     createdAt: d.data().createdAt?.toDate() || new Date(),
                     updatedAt: d.data().updatedAt?.toDate() || new Date(),
                 }));
+                // Sort client-side
+                circlesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
                 setCircles(circlesData);
                 setIsLoading(false);
                 setError(null);
             },
             (err) => {
                 console.error("Circles error:", err);
+                // Fallback attempt: if new query fails, try old one (teacherId)
+                // This handles the transition period effectively or missing indexes
+                if (err.message.includes("index") || err.code === "failed-precondition") {
+                    // Optionally notify user about index creation requirement
+                }
+
+                // Try fetching by old field if array-contains failed (e.g. index issue) 
+                // BUT actually, to handle backward compat on THE QUERY itself, we might need two queries if we want to be super safe. 
+                // simpler: just show error for now as we will update data.
                 setError("فشل في تحميل الحلقات");
                 setIsLoading(false);
             }
@@ -167,7 +184,9 @@ export function useSheikhCircles() {
                 name: data.name,
                 description: data.description || "",
                 schedule: data.schedule || "",
-                teacherId: user.uid,
+                sheikhIds: [user.uid], // <--- NEW FIELD
+                createdBy: user.uid,   // <--- NEW FIELD
+                teacherId: user.uid,   // KEEP for backward compatibility for a while
                 inviteCode,
                 assistants: [],
                 createdAt: serverTimestamp(),
@@ -198,7 +217,39 @@ export function useSheikhCircles() {
         }
     };
 
-    return { circles, isLoading, error, createCircle, updateCircle };
+    // Add Co-Sheikh
+    const addCoSheikh = async (circleId: string, sheikhId: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            await updateDoc(doc(db, "circles", circleId), {
+                sheikhIds: arrayUnion(sheikhId),
+                updatedAt: serverTimestamp(),
+            });
+            return { success: true };
+        } catch (err: any) {
+            console.error("Add co-sheikh error:", err);
+            return { success: false, error: "فشل في إضافة المعلم" };
+        }
+    };
+
+    // Remove Co-Sheikh
+    const removeCoSheikh = async (circleId: string, sheikhId: string): Promise<{ success: boolean; error?: string }> => {
+        if (sheikhId === user?.uid) {
+            return { success: false, error: "لا يمكنك إزالة نفسك من الحلقة" };
+        }
+
+        try {
+            await updateDoc(doc(db, "circles", circleId), {
+                sheikhIds: arrayRemove(sheikhId),
+                updatedAt: serverTimestamp(),
+            });
+            return { success: true };
+        } catch (err: any) {
+            console.error("Remove co-sheikh error:", err);
+            return { success: false, error: "فشل في إزالة المعلم" };
+        }
+    };
+
+    return { circles, isLoading, error, createCircle, updateCircle, addCoSheikh, removeCoSheikh };
 }
 
 // Hook: Fetch members for a circle
@@ -280,6 +331,29 @@ export function useCircleMembers(circleId: string | null) {
         }
     };
 
+    // Remove member (kick from circle)
+    const removeMember = async (memberId: string, userId: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            // 1. Delete membership record (Critical)
+            await deleteDoc(doc(db, "circleMembers", memberId));
+
+            // Optimistic update
+            setMembers(prev => prev.filter(m => m.id !== memberId));
+
+            // 2. Try to update user profile (Optional/Best Effort)
+            try {
+                await updateDoc(doc(db, "users", userId), { circleId: null });
+            } catch (profileErr) {
+                console.warn("Could not unlink circleId from user profile during kick:", profileErr);
+            }
+
+            return { success: true };
+        } catch (err: any) {
+            console.error("Remove member error:", err);
+            return { success: false, error: err.message || "فشل في إزالة الطالب" };
+        }
+    };
+
     const pendingMembers = members.filter((m) => m.status === "pending");
     const approvedMembers = members.filter((m) => m.status === "approved");
 
@@ -291,6 +365,7 @@ export function useCircleMembers(circleId: string | null) {
         error,
         approveMember,
         rejectMember,
+        removeMember,
     };
 }
 

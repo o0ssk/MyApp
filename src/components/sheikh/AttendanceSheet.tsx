@@ -22,6 +22,7 @@ import {
     Excuse,
 } from "@/lib/hooks/useAttendance";
 import { useSheikhStudents, Student } from "@/lib/hooks/useSheikhStudents";
+import { StudentBadge } from "@/components/ui/StudentBadge";
 import { fadeUp, staggerContainer } from "@/lib/motion";
 
 interface AttendanceSheetProps {
@@ -62,12 +63,13 @@ export default function AttendanceSheet({ circleId, onSaveSuccess, selectedDate:
     // ✅ Use the useSheikhStudents hook to fetch students for THIS circle
     const { students: rawStudents, isLoading: studentsLoading, error: studentsError } = useSheikhStudents(circleId);
 
-    // Transform students to the format we need (id, name, avatar)
+    // Transform students to the format we need (id, name, avatar, equippedBadge)
     const students = useMemo(() => {
         return rawStudents.map((s: Student) => ({
             id: s.odeiUserId, // This is the actual user ID
             name: s.odei,      // This is the student's name
             avatar: s.avatar,
+            equippedBadge: s.equippedBadge,
         }));
     }, [rawStudents]);
 
@@ -308,8 +310,9 @@ export default function AttendanceSheet({ circleId, onSaveSuccess, selectedDate:
 
                                 {/* Name */}
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-emerald-deep truncate">
+                                    <h3 className="font-bold text-emerald-deep truncate flex items-center gap-1">
                                         {student.name || "طالب"}
+                                        <StudentBadge badgeId={student.equippedBadge} size="sm" />
                                     </h3>
                                     {hasPendingExcuse && (
                                         <div className="flex items-center gap-1 text-gold text-xs mt-1">

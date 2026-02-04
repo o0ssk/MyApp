@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { User } from "lucide-react";
 import { Thread } from "@/lib/hooks/useMessages";
 import { listItem } from "@/lib/motion";
+import { StudentAvatar } from "@/components/ui/StudentAvatar";
+import { StudentBadge } from "@/components/ui/StudentBadge";
 
 interface ThreadCardProps {
     thread: Thread;
@@ -33,17 +34,15 @@ export function ThreadCard({ thread, onClick }: ThreadCardProps) {
         >
             {/* Avatar */}
             <div className="relative">
-                <div className="w-12 h-12 bg-sand rounded-full flex items-center justify-center">
-                    {thread.otherUserAvatar ? (
-                        <img
-                            src={thread.otherUserAvatar}
-                            alt={thread.otherUserName}
-                            className="w-12 h-12 rounded-full object-cover"
-                        />
-                    ) : (
-                        <User size={24} className="text-emerald" />
-                    )}
-                </div>
+                <StudentAvatar
+                    student={{
+                        name: thread.otherUserName || "مستخدم",
+                        photoURL: thread.otherUserAvatar,
+                        equippedFrame: thread.otherUserFrame,
+                        equippedBadge: thread.otherUserBadge,
+                    }}
+                    size="md"
+                />
                 {/* Unread indicator */}
                 {thread.isUnread && (
                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-gold rounded-full border-2 border-surface" />
@@ -53,8 +52,9 @@ export function ThreadCard({ thread, onClick }: ThreadCardProps) {
             {/* Content */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className={`font-bold truncate ${thread.isUnread ? "text-emerald-deep" : "text-text"}`}>
+                    <span className={`font-bold truncate flex items-center gap-1 ${thread.isUnread ? "text-emerald-deep" : "text-text"}`}>
                         {thread.otherUserName || "مستخدم"}
+                        <StudentBadge badgeId={thread.otherUserBadge} size="sm" />
                     </span>
                     <span className="text-xs text-text-muted whitespace-nowrap">
                         {formatTime(thread.lastMessageAt)}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/hooks";
+import { ToastProvider } from "@/components/ui/Toast";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
     title: "حلقتي | منصة حلقات القرآن الكريم",
@@ -21,11 +23,20 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="ar" dir="rtl">
-            <body className="font-tajawal">
-                <AuthProvider>
-                    {children}
-                </AuthProvider>
+        <html lang="ar" dir="rtl" suppressHydrationWarning>
+            <body className="font-tajawal bg-background text-foreground antialiased transition-colors duration-300">
+                <ThemeProvider
+                    attribute="class"
+                    defaultTheme="light"
+                    enableSystem
+                    disableTransitionOnChange={false}
+                >
+                    <AuthProvider>
+                        <ToastProvider>
+                            {children}
+                        </ToastProvider>
+                    </AuthProvider>
+                </ThemeProvider>
             </body>
         </html>
     );

@@ -18,6 +18,8 @@ import {
     serverTimestamp,
     Timestamp,
     QueryDocumentSnapshot,
+    writeBatch,
+    increment,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/hooks";
@@ -34,6 +36,7 @@ export interface Student {
     lastLogDate: Date | null;
     totalApprovedPages: number;
     isActive: boolean; // No logs in last 3 days = inactive
+    equippedBadge?: string; // Student's equipped badge
 }
 
 export interface StudentDetail {
@@ -45,6 +48,13 @@ export interface StudentDetail {
     circleName: string;
     joinedAt: Date | null;
     role: string;
+    points: number;
+    totalPoints: number;
+    equipped?: {
+        frame?: string;
+        badge?: string;
+        avatar?: string;
+    };
 }
 
 export interface StudentLog {
@@ -76,7 +86,7 @@ export interface StudentTask {
         pages?: number;
     };
     dueDate: string; // YYYY-MM-DD
-    status: "pending" | "submitted" | "completed" | "missed";
+    status: "pending" | "submitted" | "completed" | "missed" | "assigned";
     notes?: string;
     createdAt: Date;
 }
@@ -97,7 +107,7 @@ function parseDate(value: any): Date {
 }
 
 // Fetch user info helper
-async function fetchUserInfo(userId: string): Promise<{ name: string; email?: string; avatar?: string }> {
+async function fetchUserInfo(userId: string): Promise<{ name: string; email?: string; avatar?: string; points?: number; equippedBadge?: string }> {
     try {
         const userDoc = await getDoc(doc(db, "users", userId));
         if (userDoc.exists()) {
@@ -106,13 +116,46 @@ async function fetchUserInfo(userId: string): Promise<{ name: string; email?: st
             return {
                 name: data.name || "طالب",
                 email: data.email,
-                avatar: data.photoURL || null // Explicit null fallback
+                avatar: data.photoURL || null, // Explicit null fallback
+                points: data.points || 0,
+                equippedBadge: data.equippedBadge,
             };
         }
     } catch (err) {
         console.error("Error fetching user info:", err);
     }
     return { name: "طالب" };
+}
+
+// Shared helper for removing a student from a circle
+async function deleteStudentFromCircle(db: any, studentId: string, circleId: string): Promise<boolean> {
+    try {
+        // 1. Find and delete the circleMembers document (CRITICAL)
+        const membersRef = collection(db, "circleMembers");
+        const q = query(
+            membersRef,
+            where("userId", "==", studentId),
+            where("circleId", "==", circleId)
+        );
+        const snapshot = await getDocs(q);
+
+        // Delete membership records
+        const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+
+        // 2. Try to update the user document (OPTIONAL / BEST EFFORT)
+        try {
+            const userRef = doc(db, "users", studentId);
+            await updateDoc(userRef, { circleId: null });
+        } catch (profileErr) {
+            console.warn("Could not unlink circleId from user profile (permission denied), but removal succeeded.", profileErr);
+        }
+
+        return true;
+    } catch (err: any) {
+        console.error("Error removing student:", err);
+        throw err;
+    }
 }
 
 // Hook: Fetch all students across sheikh's circles
@@ -178,6 +221,7 @@ export function useSheikhStudents(circleIdInput: string | string[]) {
                                 lastLogDate: null, // Simplified - skip log fetching to avoid index issues
                                 totalApprovedPages: 0, // Simplified
                                 isActive: true, // Default to active
+                                equippedBadge: userInfo.equippedBadge,
                             });
                         }
                     } catch (e) {
@@ -198,112 +242,164 @@ export function useSheikhStudents(circleIdInput: string | string[]) {
         fetchStudents();
     }, [circleIds.join(",")]);
 
-    return { students, isLoading, error };
+    const removeStudent = async (studentId: string, circleId: string) => {
+        if (!confirm("هل أنت متأكد من حذف الطالب من الحلقة؟")) return;
+
+        try {
+            await deleteStudentFromCircle(db, studentId, circleId);
+            setStudents((prev) => prev.filter((s) => s.odeiUserId !== studentId)); // Note: filtering by userId as checking ID might be tricky if not consistent
+            return true;
+        } catch (err: any) {
+            setError(`فشل في حذف الطالب: ${err.message || "خطأ غير معروف"}`);
+            return false;
+        }
+    };
+
+    return { students, isLoading, error, removeStudent };
 }
 
 // Hook: Fetch single student detail with logs and tasks
 export function useStudentDetail(studentId: string | null) {
     const { user } = useAuth();
     const [student, setStudent] = useState<StudentDetail | null>(null);
+
+    // 1. QUERY STATE: Separate state for each collection to ensure independence
+    const [rawLogs, setRawLogs] = useState<StudentLog[]>([]);
+    const [rawTasks, setRawTasks] = useState<StudentTask[]>([]);
+
+    // 2. UI STATE: Merged and filtered results for the UI
     const [logs, setLogs] = useState<StudentLog[]>([]);
     const [tasks, setTasks] = useState<StudentTask[]>([]);
+
     const [isLoading, setIsLoading] = useState(true);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [hasMoreLogs, setHasMoreLogs] = useState(true);
-    const [lastLogDoc, setLastLogDoc] = useState<QueryDocumentSnapshot | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const LOGS_PER_PAGE = 10;
-
-    // Initial fetch
+    // Effect 0: Listen to Student Profile (Real-time)
     useEffect(() => {
         if (!studentId) {
             setStudent(null);
+            setRawLogs([]);
+            setRawTasks([]);
             setLogs([]);
             setTasks([]);
             setIsLoading(false);
             return;
         }
 
-        const fetchStudentDetail = async () => {
+        setIsLoading(true);
+
+        const userRef = doc(db, "users", studentId);
+
+        const unsubscribe = onSnapshot(userRef, async (userSnap) => {
             try {
-                setIsLoading(true);
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
 
-                // Fetch user profile
-                const userInfo = await fetchUserInfo(studentId);
+                    // Fetch Connection/Circle Info (One-time fetch per update is okay)
+                    let circleName = "";
+                    let circleId = "";
+                    let joinedAt = null;
 
-                // Find membership to get circle info
-                const membersRef = collection(db, "circleMembers");
-                const memberQuery = query(
-                    membersRef,
-                    where("userId", "==", studentId),
-                    where("status", "==", "approved"),
-                    limit(1)
-                );
-                const memberSnap = await getDocs(memberQuery);
-                const memberData = memberSnap.docs[0]?.data();
+                    try {
+                        const membersRef = collection(db, "circleMembers");
+                        const memberQuery = query(
+                            membersRef,
+                            where("userId", "==", studentId),
+                            where("status", "==", "approved"),
+                            limit(1)
+                        );
+                        const memberSnap = await getDocs(memberQuery);
 
-                let circleName = "";
-                let circleId = "";
-                if (memberData?.circleId) {
-                    circleId = memberData.circleId;
-                    const circleDoc = await getDoc(doc(db, "circles", memberData.circleId));
-                    if (circleDoc.exists()) {
-                        circleName = circleDoc.data().name;
+                        if (!memberSnap.empty) {
+                            const memberData = memberSnap.docs[0].data();
+                            joinedAt = parseDate(memberData.approvedAt) || parseDate(memberData.joinedAt);
+
+                            if (memberData.circleId) {
+                                circleId = memberData.circleId;
+                                const circleDoc = await getDoc(doc(db, "circles", circleId));
+                                if (circleDoc.exists()) {
+                                    circleName = circleDoc.data().name;
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Error fetching circle info for student:", err);
                     }
+
+                    setStudent({
+                        id: studentId,
+                        name: userData.name || "طالب",
+                        email: userData.email,
+                        avatar: userData.photoURL,
+                        circleId,
+                        circleName: circleName || "بدون حلقة",
+                        joinedAt: joinedAt, // Keep existing if valid
+                        role: "student",
+                        points: userData.points ?? 0,
+                        totalPoints: userData.totalPoints ?? 0,
+                        equipped: {
+                            frame: userData.equippedFrame,
+                            badge: userData.equippedBadge,
+                            avatar: userData.equippedAvatar
+                        }
+                    } as StudentDetail);
+                } else {
+                    setError("لم يتم العثور على بيانات الطالب");
                 }
-
-                setStudent({
-                    id: studentId,
-                    name: userInfo.name,
-                    email: userInfo.email,
-                    avatar: userInfo.avatar,
-                    circleId,
-                    circleName,
-                    joinedAt: parseDate(memberData?.approvedAt) || parseDate(memberData?.joinedAt),
-                    role: "student",
-                });
-
-                // Fetch initial logs
-                const logsRef = collection(db, "logs");
-                const logsQuery = query(
-                    logsRef,
-                    where("studentId", "==", studentId),
-                    orderBy("createdAt", "desc"),
-                    limit(LOGS_PER_PAGE)
-                );
-                const logsSnap = await getDocs(logsQuery);
-                const logsData: StudentLog[] = logsSnap.docs.map((d) => ({
-                    id: d.id,
-                    date: parseDate(d.data().date),
-                    type: d.data().type,
-                    amount: d.data().amount,
-                    status: d.data().status,
-                    studentNotes: d.data().studentNotes,
-                    teacherNotes: d.data().teacherNotes,
-                    createdAt: d.data().createdAt?.toDate() || new Date(),
-                }));
-
-                setLogs(logsData);
-                setLastLogDoc(logsSnap.docs[logsSnap.docs.length - 1] || null);
-                setHasMoreLogs(logsSnap.docs.length === LOGS_PER_PAGE);
-
-                setError(null);
-            } catch (err: any) {
-                console.error("Fetch student detail error:", err);
+            } catch (err) {
+                console.error("Error processing student snapshot:", err);
                 setError("فشل في تحميل بيانات الطالب");
             } finally {
                 setIsLoading(false);
             }
-        };
+        }, (err) => {
+            console.error("Student listener error:", err);
+            setError("فشل في الاتصال بقاعدة البيانات");
+            setIsLoading(false);
+        });
 
-        fetchStudentDetail();
+        return () => unsubscribe();
     }, [studentId]);
 
-    // Fetch tasks with realtime updates
-    useEffect(() => {
-        if (!studentId) return;
+    // 4. Compatibility Stub (Real-time handles updates now)
+    const refreshStudent = async () => { };
 
+    // Effect 1: Query 'logs' collection (Realtime)
+    useEffect(() => {
+        if (!studentId || !db) return;
+
+        // Query: Fetch ALL logs for this student
+        const logsRef = collection(db, "logs");
+        const logsQuery = query(
+            logsRef,
+            where("studentId", "==", studentId),
+            orderBy("createdAt", "desc")
+        );
+
+        const unsubscribe = onSnapshot(logsQuery, (snapshot) => {
+            const parsedLogs: StudentLog[] = snapshot.docs.map((d) => ({
+                id: d.id,
+                date: parseDate(d.data().date),
+                type: d.data().type,
+                amount: d.data().amount,
+                status: d.data().status,
+                studentNotes: d.data().studentNotes,
+                teacherNotes: d.data().teacherNotes,
+                pointsAwarded: d.data().pointsAwarded,
+                createdAt: d.data().createdAt?.toDate() || new Date(),
+            }));
+            console.log("Fetched Logs:", parsedLogs.length);
+            setRawLogs(parsedLogs);
+        }, (err) => console.error("Logs listener error:", err));
+
+        return () => unsubscribe();
+    }, [studentId]);
+
+    // Effect 2: Query 'tasks' collection (Realtime)
+    useEffect(() => {
+        if (!studentId || !db) return;
+
+        // Query: Fetch ALL tasks for this student
         const tasksRef = collection(db, "tasks");
         const tasksQuery = query(
             tasksRef,
@@ -311,81 +407,127 @@ export function useStudentDetail(studentId: string | null) {
             orderBy("createdAt", "desc")
         );
 
-        const unsubscribe = onSnapshot(
-            tasksQuery,
-            (snapshot) => {
-                const tasksData: StudentTask[] = snapshot.docs.map((d) => ({
-                    id: d.id,
-                    circleId: d.data().circleId,
-                    studentId: d.data().studentId,
-                    teacherId: d.data().teacherId,
-                    type: d.data().type,
-                    target: d.data().target,
-                    dueDate: d.data().dueDate,
-                    status: d.data().status,
-                    notes: d.data().notes,
-                    createdAt: d.data().createdAt?.toDate() || new Date(),
-                }));
-                setTasks(tasksData);
-            },
-            (err) => {
-                console.error("Tasks listener error:", err);
-            }
-        );
+        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+            const parsedTasks: StudentTask[] = snapshot.docs.map((d) => ({
+                id: d.id,
+                circleId: d.data().circleId,
+                studentId: d.data().studentId,
+                teacherId: d.data().teacherId,
+                type: d.data().type,
+                target: d.data().target,
+                dueDate: d.data().dueDate,
+                status: d.data().status,
+                notes: d.data().notes,
+                createdAt: d.data().createdAt?.toDate() || new Date(),
+            }));
+            console.log("Fetched Tasks:", parsedTasks.length);
+            setRawTasks(parsedTasks);
+
+            // Sync UI tasks state immediately
+            setTasks(parsedTasks);
+        }, (err) => console.error("Tasks listener error:", err));
 
         return () => unsubscribe();
     }, [studentId]);
 
-    // Load more logs
-    const loadMoreLogs = useCallback(async () => {
-        if (!studentId || !lastLogDoc || !hasMoreLogs || isLoadingMore) return;
-
-        setIsLoadingMore(true);
-        try {
-            const logsRef = collection(db, "logs");
-            const logsQuery = query(
-                logsRef,
-                where("studentId", "==", studentId),
-                orderBy("createdAt", "desc"),
-                startAfter(lastLogDoc),
-                limit(LOGS_PER_PAGE)
-            );
-            const logsSnap = await getDocs(logsQuery);
-            const newLogs: StudentLog[] = logsSnap.docs.map((d) => ({
-                id: d.id,
-                date: d.data().date?.toDate() || new Date(),
-                type: d.data().type,
-                amount: d.data().amount,
-                status: d.data().status,
-                studentNotes: d.data().studentNotes,
-                teacherNotes: d.data().teacherNotes,
-                createdAt: d.data().createdAt?.toDate() || new Date(),
+    // Effect 3: Merge Logs & Tasks for UI
+    useEffect(() => {
+        // Convert Tasks to Log-like format for the history list
+        // Only show COMPLETED tasks in the history
+        const completedTaskLogs: StudentLog[] = rawTasks
+            .filter(t => t.status === "completed")
+            .map(t => ({
+                id: t.id,
+                date: new Date(t.dueDate), // Use due date as the log date
+                type: t.type,
+                amount: t.target,
+                status: "approved", // Tasks marked completed are considered approved/done
+                createdAt: t.createdAt,
             }));
 
-            setLogs((prev) => [...prev, ...newLogs]);
-            setLastLogDoc(logsSnap.docs[logsSnap.docs.length - 1] || null);
-            setHasMoreLogs(logsSnap.docs.length === LOGS_PER_PAGE);
-        } catch (err) {
-            console.error("Load more logs error:", err);
-        } finally {
-            setIsLoadingMore(false);
-        }
-    }, [studentId, lastLogDoc, hasMoreLogs, isLoadingMore]);
+        // Merge raw logs + completed tasks
+        const merged = [...rawLogs, ...completedTaskLogs].sort((a, b) =>
+            b.createdAt.getTime() - a.createdAt.getTime()
+        );
 
-    const pendingTasks = tasks.filter((t) => t.status === "pending");
-    const completedTasks = tasks.filter((t) => t.status === "completed" || t.status === "submitted");
+        setLogs(merged);
+    }, [rawLogs, rawTasks]);
+
+    // Derived: Pending Tasks
+    const completedTasks = rawTasks.filter(t => t.status === "completed");
+    const pendingTasks = rawTasks.filter(t => t.status !== "completed");
+
+    const removeStudent = async (): Promise<boolean> => {
+        if (!student || !student.circleId) return false;
+        try {
+            await deleteStudentFromCircle(db, studentId!, student.circleId);
+            return true;
+        } catch (err: any) {
+            setError(`فشل في حذف الطالب: ${err.message || "خطأ غير معروف"}`);
+            return false;
+        }
+    };
+
+    const approveLogWithPoints = async (logId: string, studentId: string, logData: StudentLog): Promise<number | false> => {
+        if (!studentId || !logId) return false;
+
+        try {
+            const batch = writeBatch(db);
+            const logRef = doc(db, "logs", logId);
+            const userRef = doc(db, "users", studentId);
+
+            // 1. Strict Parsing & Fail-Safe Logic
+            const rawPages = logData?.amount?.pages;
+            // Force strict number conversion. If NaN or <= 0, DEFAULT TO 1.
+            // This guarantees points are ALWAYS added for an approved log.
+            const pages = (Number(rawPages) > 0) ? Number(rawPages) : 1;
+
+            // 2. Calculate Points (New Gamification Formula)
+            // Memorization (Hifz) = pages × 3 points
+            // Review (Muraja'ah) = pages × 1 point
+            const isMemorization = logData?.type === "memorization";
+            const pointsPerPage = isMemorization ? 3 : 1;
+            const pointsToAdd = pages * pointsPerPage;
+
+            console.log(`[Points System] 💰 Adding ${pointsToAdd} points to student ${studentId} (Pages: ${pages}, Type: ${logData?.type}, Rate: ${pointsPerPage}pts/page)`);
+
+            // 3. Batch Update with ATOMIC INCREMENT (Critical)
+            // A. Update Log Status
+            batch.update(logRef, {
+                status: "approved",
+                pointsAwarded: pointsToAdd,
+                approvedAt: serverTimestamp()
+            });
+
+            // B. Increment User Points safely
+            batch.update(userRef, {
+                points: increment(pointsToAdd),
+                totalPoints: increment(pointsToAdd)
+            });
+
+            await batch.commit();
+            return pointsToAdd; // Return actual points added for UI feedback
+        } catch (err: any) {
+            console.error("Error approving log with points:", err);
+            setError("فشل في اعتماد السجل وإضافة النقاط");
+            return false;
+        }
+    };
 
     return {
         student,
-        logs,
-        tasks,
-        pendingTasks,
+        logs,           // Contains Merged History (Logs + Assignments)
+        tasks,          // Contains Raw Tasks
+        pendingTasks,   // Visible in "Assigned Tasks" card
         completedTasks,
         isLoading,
-        isLoadingMore,
-        hasMoreLogs,
-        loadMoreLogs,
+        isLoadingMore: false,
+        hasMoreLogs: false,
+        loadMoreLogs: async () => { },
         error,
+        removeStudent,
+        approveLogWithPoints,
+        refreshStudent,
     };
 }
 

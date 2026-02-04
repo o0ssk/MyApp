@@ -14,12 +14,14 @@ import {
 } from "lucide-react";
 
 import { useSheikhCircles } from "@/lib/hooks/useSheikh";
-import { useSheikhStudents, Student } from "@/lib/hooks/useSheikhStudents";
+import { useSheikhStudents, Student } from "../../../lib/hooks/useSheikhStudents";
+import { useCircleStats } from "@/lib/hooks/useReports";
 
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Avatar } from "@/components/ui/Avatar";
+import { StudentBadge } from "@/components/ui/StudentBadge";
 import { staggerContainer, fadeUp, listItem } from "@/lib/motion";
 
 export default function StudentsPage() {
@@ -223,7 +225,10 @@ export default function StudentsPage() {
                                                                 className="w-full h-full"
                                                             />
                                                         </div>
-                                                        <span className="font-bold text-emerald-deep">{student.odei}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-emerald-deep">{student.odei}</span>
+                                                            <StudentBadge badgeId={student.equippedBadge} size="sm" />
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -311,7 +316,10 @@ function StudentCard({ student }: { student: Student }) {
 
                         {/* Info */}
                         <div>
-                            <h3 className="font-bold text-emerald-deep">{student.odei}</h3>
+                            <h3 className="font-bold text-emerald-deep flex items-center gap-1">
+                                {student.odei}
+                                <StudentBadge badgeId={student.equippedBadge} size="sm" />
+                            </h3>
                             <div className="flex items-center gap-3 text-sm text-text-muted">
                                 <span className="flex items-center gap-1">
                                     <Users size={14} />

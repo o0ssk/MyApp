@@ -1,6 +1,11 @@
+
 "use client";
 
 import { useState } from "react";
+
+import { StudentAvatar } from "@/components/ui/StudentAvatar";
+import { StudentBadge } from "@/components/ui/StudentBadge";
+
 import { motion } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -16,9 +21,10 @@ import {
     Loader2,
     FileText,
     Award,
+    Trophy,
 } from "lucide-react";
 
-import { useStudentDetail, useAssignTask, StudentLog, StudentTask } from "@/lib/hooks/useSheikhStudents";
+import { useStudentDetail, useAssignTask, StudentLog, StudentTask } from "../../../../lib/hooks/useSheikhStudents";
 import { useCreateThread } from "@/lib/hooks/useMessages";
 import { useAuth } from "@/lib/auth/hooks";
 import { useToast } from "@/components/ui/Toast";
@@ -46,6 +52,9 @@ export default function StudentDetailPage() {
         hasMoreLogs,
         loadMoreLogs,
         error,
+        removeStudent,
+        approveLogWithPoints,
+        refreshStudent,
     } = useStudentDetail(studentId);
 
     const { createOrOpenThread, isCreating: isCreatingThread } = useCreateThread();
@@ -149,15 +158,23 @@ export default function StudentDetailPage() {
                 <Card className="mb-6">
                     <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-full bg-emerald/10 flex items-center justify-center overflow-hidden">
-                                {student.avatar ? (
-                                    <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-2xl font-bold text-emerald">{student.name.charAt(0)}</span>
-                                )}
+                            <div className="flex-shrink-0">
+                                <StudentAvatar
+                                    student={{
+                                        photoURL: student.avatar,
+                                        equippedFrame: student.equipped?.frame,
+                                        equippedBadge: student.equipped?.badge,
+                                        equippedAvatar: student.equipped?.avatar,
+                                        name: student.name
+                                    }}
+                                    size="xl"
+                                />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-emerald-deep">{student.name}</h1>
+                                <h1 className="text-xl font-bold text-emerald-deep flex items-center gap-2">
+                                    {student.name}
+                                    <StudentBadge badgeId={student.equipped?.badge} size="md" />
+                                </h1>
                                 <p className="text-text-muted">{student.circleName}</p>
                                 {student.joinedAt && (
                                     <p className="text-sm text-text-muted">
@@ -165,6 +182,14 @@ export default function StudentDetailPage() {
                                     </p>
                                 )}
                             </div>
+                        </div>
+
+
+
+                        {/* Points Badge */}
+                        <div className="flex items-center gap-2 px-3 py-1 bg-gold/10 text-gold-dark rounded-full border border-gold/20">
+                            <Trophy size={16} />
+                            <span className="font-bold">{(student as any).totalPoints || 0} نقطة</span>
                         </div>
 
                         <div className="flex gap-2">
@@ -175,6 +200,22 @@ export default function StudentDetailPage() {
                             >
                                 <MessageCircle size={18} />
                                 مراسلة
+                            </Button>
+                            <Button
+                                variant="danger"
+                                onClick={async () => {
+                                    if (confirm("هل أنت متأكد من حذف هذا الطالب من الحلقة؟\nسيتم إزالة ارتباطه بالحلقة ولكن سيبقى حسابه فعالاً.")) {
+                                        if (await removeStudent()) {
+                                            showToast("تم حذف الطالب من الحلقة", "success");
+                                            router.push("/sheikh/students");
+                                        } else {
+                                            showToast("فشل في حذف الطالب", "error");
+                                        }
+                                    }
+                                }}
+                            >
+                                <Trash2 size={18} />
+                                حذف
                             </Button>
                         </div>
                     </CardContent>
@@ -209,8 +250,10 @@ export default function StudentDetailPage() {
                             <p className="text-sm text-text-muted">إجمالي السجلات</p>
                         </CardContent>
                     </Card>
+
                 </motion.div>
             </motion.div>
+
 
             {/* Active Tasks */}
             <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mb-6">
@@ -266,7 +309,18 @@ export default function StudentDetailPage() {
                             <>
                                 <div className="space-y-3">
                                     {logs.map((log) => (
-                                        <HistoryItem key={log.id} log={log} />
+                                        <HistoryItem
+                                            key={log.id}
+                                            log={log}
+                                            onApprove={
+                                                log.status === 'pending_approval'
+                                                    ? async () => {
+                                                        const success = await approveLogWithPoints(log.id, studentId as string, log);
+                                                        if (success) await refreshStudent();
+                                                    }
+                                                    : undefined
+                                            }
+                                        />
                                     ))}
                                 </div>
 
@@ -287,14 +341,15 @@ export default function StudentDetailPage() {
                 </Card>
             </motion.div>
 
-            {/* Task Assign Modal */}
             <TaskAssignModal
                 isOpen={isTaskModalOpen}
                 onClose={() => setIsTaskModalOpen(false)}
                 onSubmit={handleAssignTask}
                 isLoading={isAssigning}
             />
-        </div>
+
+
+        </div >
     );
 }
 
@@ -314,7 +369,7 @@ function TaskCard({
     // Format target
     let targetText = "";
     if (task.target.surah) {
-        targetText = `سورة ${task.target.surah}`;
+        targetText = `سورة ${task.target.surah} `;
         if (task.target.ayahFrom && task.target.ayahTo) {
             targetText += ` (${task.target.ayahFrom} - ${task.target.ayahTo})`;
         }
@@ -325,7 +380,7 @@ function TaskCard({
     return (
         <div className="flex items-center justify-between p-4 bg-sand rounded-xl">
             <div className="flex items-center gap-3">
-                <span className={`px-2 py-1 rounded text-xs font-medium ${typeColor}`}>
+                <span className={`px - 2 py - 1 rounded text - xs font - medium ${typeColor} `}>
                     {typeLabel}
                 </span>
                 <div>
@@ -348,7 +403,22 @@ function TaskCard({
 }
 
 // History Item Component
-function HistoryItem({ log }: { log: StudentLog }) {
+function HistoryItem({ log, onApprove }: { log: StudentLog; onApprove?: () => void }) {
+    const [isApproving, setIsApproving] = useState(false);
+    const { showToast } = useToast();
+
+    const handleApprove = async () => {
+        if (!onApprove) return;
+        setIsApproving(true);
+        try {
+            await onApprove();
+            showToast("تم اعتماد السجل واحتساب النقاط", "success");
+        } catch (error) {
+            showToast("حدث خطأ أثناء الاعتماد", "error");
+        } finally {
+            setIsApproving(false);
+        }
+    };
     const typeLabel = log.type === "memorization" ? "حفظ" : "مراجعة";
     const typeColor = log.type === "memorization" ? "bg-emerald/10 text-emerald" : "bg-gold/10 text-gold";
 
@@ -364,7 +434,7 @@ function HistoryItem({ log }: { log: StudentLog }) {
     if (log.amount.pages) {
         amountText = `${log.amount.pages} صفحة`;
     } else if (log.amount.surah) {
-        amountText = `سورة ${log.amount.surah}`;
+        amountText = `سورة ${log.amount.surah} `;
         if (log.amount.ayahFrom && log.amount.ayahTo) {
             amountText += ` (${log.amount.ayahFrom} - ${log.amount.ayahTo})`;
         }
@@ -383,10 +453,10 @@ function HistoryItem({ log }: { log: StudentLog }) {
 
             <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColor}`}>
+                    <span className={`px - 2 py - 0.5 rounded text - xs font - medium ${typeColor} `}>
                         {typeLabel}
                     </span>
-                    <span className={`text-xs font-medium ${status.color}`}>
+                    <span className={`text - xs font - medium ${status.color} `}>
                         {status.label}
                     </span>
                 </div>
@@ -397,6 +467,21 @@ function HistoryItem({ log }: { log: StudentLog }) {
                     </p>
                 )}
             </div>
+
+            {/* Approval Action */}
+            {onApprove && (
+                <div className="flex-shrink-0">
+                    <Button
+                        variant="gold"
+                        size="sm"
+                        onClick={handleApprove}
+                        isLoading={isApproving}
+                    >
+                        <CheckCircle size={16} />
+                        اعتماد
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }
@@ -468,20 +553,20 @@ function TaskAssignModal({
                         <button
                             type="button"
                             onClick={() => setType("memorization")}
-                            className={`flex-1 py-3 rounded-xl font-medium transition-colors ${type === "memorization"
+                            className={`flex - 1 py - 3 rounded - xl font - medium transition - colors ${type === "memorization"
                                 ? "bg-emerald text-white"
                                 : "bg-sand text-text hover:bg-emerald/10"
-                                }`}
+                                } `}
                         >
                             حفظ
                         </button>
                         <button
                             type="button"
                             onClick={() => setType("revision")}
-                            className={`flex-1 py-3 rounded-xl font-medium transition-colors ${type === "revision"
+                            className={`flex - 1 py - 3 rounded - xl font - medium transition - colors ${type === "revision"
                                 ? "bg-gold text-white"
                                 : "bg-sand text-text hover:bg-gold/10"
-                                }`}
+                                } `}
                         >
                             مراجعة
                         </button>
@@ -497,20 +582,20 @@ function TaskAssignModal({
                         <button
                             type="button"
                             onClick={() => setInputMode("surah")}
-                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${inputMode === "surah"
+                            className={`flex - 1 py - 2 rounded - lg text - sm font - medium transition - colors ${inputMode === "surah"
                                 ? "bg-emerald/10 text-emerald border border-emerald"
                                 : "bg-sand text-text-muted"
-                                }`}
+                                } `}
                         >
                             بالسورة والآيات
                         </button>
                         <button
                             type="button"
                             onClick={() => setInputMode("pages")}
-                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${inputMode === "pages"
+                            className={`flex - 1 py - 2 rounded - lg text - sm font - medium transition - colors ${inputMode === "pages"
                                 ? "bg-emerald/10 text-emerald border border-emerald"
                                 : "bg-sand text-text-muted"
-                                }`}
+                                } `}
                         >
                             بالصفحات
                         </button>

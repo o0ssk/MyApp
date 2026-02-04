@@ -11,11 +11,14 @@ import {
     FileText,
     Loader2,
     TrendingUp,
+    HourglassIcon,
+    XCircle,
 } from "lucide-react";
 import {
     useAttendance,
     AttendanceRecord,
     AttendanceStats,
+    Excuse,
     formatDateKey,
     getLastNDays,
 } from "@/lib/hooks/useAttendance";
@@ -33,23 +36,39 @@ const STATUS_CONFIG = {
     excused: { label: "بعذر", icon: AlertCircle, color: "bg-purple-500", textColor: "text-purple-500" },
 };
 
+const EXCUSE_STATUS_BADGE = {
+    pending: { label: "جاري المراجعة", color: "bg-amber-100 text-amber-700 border-amber-200", icon: HourglassIcon },
+    rejected: { label: "العذر مرفوض", color: "bg-red-100 text-red-600 border-red-200", icon: XCircle },
+    approved: { label: "العذر مقبول", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: Check },
+};
+
 export default function AttendanceHistory({ circleId }: AttendanceHistoryProps) {
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
+    const [excuses, setExcuses] = useState<Excuse[]>([]);
     const [stats, setStats] = useState<AttendanceStats | null>(null);
     const [isExcuseModalOpen, setIsExcuseModalOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-    const { isLoading, error, fetchMyAttendance, calculateStats } = useAttendance(circleId);
+    const { isLoading, error, fetchMyAttendance, fetchMyExcuses, calculateStats } = useAttendance(circleId);
 
     const loadAttendance = useCallback(async () => {
-        const data = await fetchMyAttendance(7);
-        setRecords(data);
-        setStats(calculateStats(data));
-    }, [fetchMyAttendance, calculateStats]);
+        const [attendanceData, excuseData] = await Promise.all([
+            fetchMyAttendance(7),
+            fetchMyExcuses(),
+        ]);
+        setRecords(attendanceData);
+        setExcuses(excuseData);
+        setStats(calculateStats(attendanceData));
+    }, [fetchMyAttendance, fetchMyExcuses, calculateStats]);
 
     useEffect(() => {
         loadAttendance();
     }, [loadAttendance]);
+
+    // Get excuse for a specific date
+    const getExcuseForDate = (dateKey: string): Excuse | undefined => {
+        return excuses.find((e) => e.date === dateKey);
+    };
 
     const openExcuseModal = (date?: string) => {
         setSelectedDate(date || formatDateKey(new Date()));
@@ -159,6 +178,7 @@ export default function AttendanceHistory({ circleId }: AttendanceHistoryProps) 
                         <span className="mr-3 text-text-muted">جاري التحميل...</span>
                     </div>
                 ) : (
+
                     <motion.div
                         variants={staggerContainer}
                         initial="hidden"
@@ -169,6 +189,10 @@ export default function AttendanceHistory({ circleId }: AttendanceHistoryProps) 
                             const record = attendanceByDate.get(dateKey);
                             const status = record?.status || null;
                             const config = status ? STATUS_CONFIG[status] : null;
+                            const excuse = getExcuseForDate(dateKey);
+                            const excuseConfig = excuse && excuse.status !== "approved"
+                                ? EXCUSE_STATUS_BADGE[excuse.status]
+                                : null;
 
                             return (
                                 <motion.div
@@ -191,7 +215,8 @@ export default function AttendanceHistory({ circleId }: AttendanceHistoryProps) 
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                                            {/* Attendance Status Badge */}
                                             {config ? (
                                                 <div
                                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.color} text-white text-sm`}
@@ -205,8 +230,18 @@ export default function AttendanceHistory({ circleId }: AttendanceHistoryProps) 
                                                 </div>
                                             )}
 
-                                            {/* Show excuse button for absent days */}
-                                            {status === "absent" && (
+                                            {/* Excuse Status Badge (for pending/rejected) */}
+                                            {excuseConfig && (
+                                                <div
+                                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${excuseConfig.color}`}
+                                                >
+                                                    <excuseConfig.icon size={12} />
+                                                    <span>{excuseConfig.label}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Show excuse button for absent days without pending excuse */}
+                                            {status === "absent" && !excuse && (
                                                 <button
                                                     onClick={() => openExcuseModal(dateKey)}
                                                     className="p-2 text-gold hover:bg-gold/10 rounded-lg transition-colors"

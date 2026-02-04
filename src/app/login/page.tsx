@@ -72,7 +72,7 @@ function LoginContent() {
         if (user && !authLoading) {
             checkUserProfileExists(user.uid).then((exists) => {
                 if (exists) {
-                    router.replace("/app/dashboard");
+                    router.replace("/student");
                 } else {
                     router.replace("/onboarding");
                 }
@@ -181,7 +181,7 @@ function EmailAuthForm() {
     useEffect(() => {
         if (user) {
             checkUserProfileExists(user.uid).then((exists) => {
-                router.replace(exists ? "/app/dashboard" : "/onboarding");
+                router.replace(exists ? "/student" : "/onboarding");
             });
         }
     }, [user, router]);
@@ -540,7 +540,7 @@ function GoogleSignInButton() {
     useEffect(() => {
         if (user) {
             checkUserProfileExists(user.uid).then((exists) => {
-                router.replace(exists ? "/app/dashboard" : "/onboarding");
+                router.replace(exists ? "/student" : "/onboarding");
             });
         }
     }, [user, router]);

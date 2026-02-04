@@ -8,7 +8,6 @@ import {
     Phone,
     Save,
     LogOut,
-    Check,
     Camera,
     Loader2
 } from "lucide-react";
@@ -18,31 +17,25 @@ import { useRouter } from "next/navigation";
 
 import { db, auth } from "@/lib/firebase/client";
 import { useAuth, UserProfile } from "@/lib/auth/hooks";
-import { useStorage } from "@/lib/hooks/useStorage";
+import { compressImage } from "@/lib/utils/compressor";
 import { useToast } from "@/components/ui/Toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
+import { StudentAvatar } from "@/components/ui/StudentAvatar";
+import { StudentBadge } from "@/components/ui/StudentBadge";
 import { fadeUp, staggerContainer, listItem } from "@/lib/motion";
+import { DeleteAccountZone } from "@/components/ui/DeleteAccountZone";
 
-// Premium avatar presets (emoji-based for V1)
-const AVATAR_PRESETS = [
-    { id: "scholar", emoji: "🧑‍🏫", label: "معلم" },
-    { id: "student", emoji: "📖", label: "طالب" },
-    { id: "book", emoji: "📚", label: "كتب" },
-    { id: "star", emoji: "⭐", label: "نجم" },
-    { id: "crown", emoji: "👑", label: "تاج" },
-    { id: "mosque", emoji: "🕌", label: "مسجد" },
-];
 
 interface ProfileFormProps {
     showRoleBadge?: boolean;
+    studentData?: any;
 }
 
-export function ProfileForm({ showRoleBadge = true }: ProfileFormProps) {
+export function ProfileForm({ showRoleBadge = true, studentData }: ProfileFormProps) {
     const { user, userProfile } = useAuth();
     const { showToast } = useToast();
-    const { uploadFile, uploading, progress } = useStorage();
     const router = useRouter();
 
     // Form state
@@ -51,6 +44,10 @@ export function ProfileForm({ showRoleBadge = true }: ProfileFormProps) {
     const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [uploading, setUploading] = useState(false);
+
+    // Use passed live data or fallback to auth context
+    const displayProfile = studentData || userProfile;
 
     // Load profile data
     useEffect(() => {
@@ -77,20 +74,24 @@ export function ProfileForm({ showRoleBadge = true }: ProfileFormProps) {
         );
     };
 
-    // Handle file selection
+    // Handle file selection - Compress to Base64 (stored in Firestore)
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0] && user) {
-            const file = e.target.files[0];
-            const path = `profile_images/${user.uid}/avatar_${Date.now()}`;
+        if (!e.target.files || !e.target.files[0] || !user) return;
 
-            const result = await uploadFile(file, path);
+        const file = e.target.files[0];
+        console.log("[ProfileForm] Starting compression:", { fileName: file.name, fileSize: file.size });
 
-            if (result.url) {
-                setSelectedAvatar(result.url);
-                showToast("تم تحميل الصورة بنجاح", "success");
-            } else if (result.error) {
-                showToast(result.error, "error");
-            }
+        setUploading(true);
+        try {
+            const base64 = await compressImage(file);
+            console.log("[ProfileForm] Compression success, size:", (base64.length / 1024).toFixed(1), "KB");
+            setSelectedAvatar(base64);
+            showToast("تم تحميل الصورة بنجاح", "success");
+        } catch (err: any) {
+            console.error("[ProfileForm] Compression failed:", err.message);
+            showToast(err.message || "فشل في معالجة الصورة", "error");
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -143,22 +144,25 @@ export function ProfileForm({ showRoleBadge = true }: ProfileFormProps) {
                 <Card>
                     <CardContent className="flex flex-col items-center py-8">
                         {/* Avatar Wrapper */}
-                        <div className="relative mb-4 group w-24 h-24">
-                            <div className="w-full h-full rounded-full border-4 border-emerald/20 overflow-hidden bg-sand">
-                                {uploading ? (
-                                    <div className="w-full h-full flex flex-col items-center justify-center bg-black/50 text-white">
-                                        <Loader2 className="animate-spin mb-1" size={24} />
-                                        <span className="text-[10px]">{Math.round(progress)}%</span>
-                                    </div>
-                                ) : (
-                                    <Avatar
-                                        src={selectedAvatar}
-                                        name={name || "User"}
-                                        size="xl"
-                                        className="w-full h-full"
-                                    />
-                                )}
-                            </div>
+                        <div className="relative mb-4 group w-28 h-28">
+                            {uploading ? (
+                                <div className="w-full h-full rounded-full flex flex-col items-center justify-center bg-emerald/20 text-emerald-deep">
+                                    <Loader2 className="animate-spin mb-1" size={28} />
+                                    <span className="text-xs font-medium">جارٍ الضغط...</span>
+                                </div>
+                            ) : (
+                                <StudentAvatar
+                                    student={{
+                                        name: name || "User",
+                                        photoURL: selectedAvatar,
+                                        equippedFrame: displayProfile?.equippedFrame,
+                                        equippedBadge: displayProfile?.equippedBadge,
+                                        equippedAvatar: displayProfile?.equippedAvatar,
+                                    }}
+                                    size="xl"
+                                    className="w-full h-full"
+                                />
+                            )}
 
                             {/* Camera Icon - Visual Layer Only (Pointer Events None) */}
                             <div className="absolute bottom-0 right-0 w-8 h-8 bg-emerald text-white rounded-full flex items-center justify-center shadow-lg z-40 pointer-events-none">
@@ -176,9 +180,10 @@ export function ProfileForm({ showRoleBadge = true }: ProfileFormProps) {
                             />
                         </div>
 
-                        {/* Name */}
-                        <h2 className="text-xl font-bold text-emerald-deep mb-1">
+                        {/* Name with Badge */}
+                        <h2 className="text-xl font-bold text-emerald-deep mb-1 flex items-center justify-center gap-2">
                             {name || "مستخدم"}
+                            <StudentBadge badgeId={displayProfile?.equippedBadge} size="md" />
                         </h2>
 
                         {/* Email */}
@@ -252,45 +257,6 @@ export function ProfileForm({ showRoleBadge = true }: ProfileFormProps) {
                 </Card>
             </motion.div>
 
-            {/* Avatar Selection Card - Students Only */}
-            {userProfile?.role === 'student' && (
-                <motion.div variants={listItem}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <span className="text-lg">🎨</span>
-                                اختر صورتك الرمزية
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                                {AVATAR_PRESETS.map((avatar) => (
-                                    <button
-                                        key={avatar.id}
-                                        onClick={() => setSelectedAvatar(avatar.emoji)}
-                                        className={`relative p-4 rounded-xl border-2 transition-all ${selectedAvatar === avatar.emoji
-                                            ? "border-emerald bg-emerald/5 shadow-lg"
-                                            : "border-gray-200 hover:border-emerald/50 hover:bg-sand"
-                                            }`}
-                                    >
-                                        <span className="text-3xl block text-center">
-                                            {avatar.emoji}
-                                        </span>
-                                        <span className="text-xs text-text-muted block text-center mt-1">
-                                            {avatar.label}
-                                        </span>
-                                        {selectedAvatar === avatar.emoji && (
-                                            <div className="absolute -top-2 -left-2 w-6 h-6 bg-emerald rounded-full flex items-center justify-center">
-                                                <Check size={14} className="text-white" />
-                                            </div>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-            )}
 
             {/* Action Buttons */}
             <motion.div variants={listItem} className="flex flex-col gap-3">
@@ -330,6 +296,12 @@ export function ProfileForm({ showRoleBadge = true }: ProfileFormProps) {
                         </>
                     )}
                 </Button>
+            </motion.div>
+
+            {/* Delete Account Zone */}
+            <motion.div variants={listItem}>
+                <div className="my-6 border-t border-gray-200/60" />
+                <DeleteAccountZone />
             </motion.div>
         </motion.div>
     );

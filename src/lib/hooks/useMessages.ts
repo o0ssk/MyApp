@@ -31,6 +31,8 @@ export interface Thread {
     otherUserId: string;
     otherUserName?: string;
     otherUserAvatar?: string;
+    otherUserBadge?: string;
+    otherUserFrame?: string;
     isUnread: boolean;
     unreadCount?: number;
 }
@@ -49,12 +51,17 @@ export interface Message {
 }
 
 // Fetch user info helper
-async function fetchUserInfo(userId: string): Promise<{ name: string; avatar?: string }> {
+async function fetchUserInfo(userId: string): Promise<{ name: string; avatar?: string; badge?: string; frame?: string }> {
     try {
         const userDoc = await getDoc(doc(db, "users", userId));
         if (userDoc.exists()) {
             const data = userDoc.data();
-            return { name: data.name || "مستخدم", avatar: data.avatar };
+            return {
+                name: data.name || "مستخدم",
+                avatar: data.photoURL,
+                badge: data.equippedBadge,
+                frame: data.equippedFrame,
+            };
         }
     } catch (err) {
         console.error("Error fetching user info:", err);
@@ -122,6 +129,8 @@ export function useThreads() {
                         otherUserId,
                         otherUserName: otherUserInfo.name,
                         otherUserAvatar: otherUserInfo.avatar,
+                        otherUserBadge: otherUserInfo.badge,
+                        otherUserFrame: otherUserInfo.frame,
                         isUnread,
                     });
                 }
