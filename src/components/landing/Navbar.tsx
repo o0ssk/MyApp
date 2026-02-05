@@ -142,6 +142,11 @@ export default function Navbar() {
                             >
                                 ابدأ الآن
                             </button>
+                            {/* Theme Toggle for Mobile */}
+                            <div className="flex items-center justify-between mt-2 pt-4 border-t border-border">
+                                <span className="text-sm text-text-muted">الوضع الليلي</span>
+                                <ModeToggle />
+                            </div>
                         </div>
                     </motion.div>
                 )}
