@@ -11,7 +11,9 @@ import {
     Settings,
     X,
     CalendarCheck,
+    MessageCircle,
 } from "lucide-react";
+import { ModeToggleSimple } from "@/components/mode-toggle";
 
 interface SidebarProps {
     className?: string;
@@ -24,6 +26,7 @@ const navItems = [
     { href: "/sheikh/attendance", label: "التحضير", icon: CalendarCheck },
     { href: "/sheikh/approvals", label: "المراجعات", icon: ClipboardCheck },
     { href: "/sheikh/students", label: "الطلاب", icon: GraduationCap },
+    { href: "/sheikh/messages", label: "الرسائل", icon: MessageCircle },
     { href: "/sheikh/reports", label: "التقارير", icon: BarChart3 },
     { href: "/sheikh/settings", label: "الإعدادات", icon: Settings },
 ];
@@ -83,6 +86,10 @@ export function Sidebar({ className, onClose }: SidebarProps) {
 
             {/* Footer */}
             <div className="p-4 border-t border-border mt-auto">
+                <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-text-muted">المظهر</span>
+                    <ModeToggleSimple />
+                </div>
                 <div className="text-xs text-text-muted text-center">
                     حلقتي © {new Date().getFullYear()}
                 </div>

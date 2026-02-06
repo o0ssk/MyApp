@@ -23,6 +23,14 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
     "auth/popup-blocked": "تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة.",
     "auth/cancelled-popup-request": "تم إلغاء طلب تسجيل الدخول.",
     "auth/account-exists-with-different-credential": "يوجد حساب بنفس البريد الإلكتروني باستخدام طريقة دخول مختلفة.",
+    "auth/unauthorized-domain": "هذا النطاق غير مصرح به. تحقق من إعدادات Firebase Authentication.",
+    "auth/invalid-api-key": "مفتاح API غير صالح. تحقق من إعدادات Firebase.",
+    "auth/app-not-authorized": "التطبيق غير مصرح له باستخدام Firebase Authentication.",
+    "auth/configuration-not-found": "لم يتم العثور على إعدادات OAuth. تحقق من إعدادات Google Cloud Console.",
+    "auth/invalid-oauth-client-id": "معرف عميل OAuth غير صالح. تحقق من Google Cloud Console.",
+    "auth/invalid-oauth-provider": "موفر OAuth غير صالح.",
+    "auth/redirect-cancelled-by-user": "تم إلغاء عملية تسجيل الدخول.",
+    "auth/redirect-operation-pending": "عملية إعادة توجيه قيد التنفيذ بالفعل.",
 
     // Network errors
     "auth/network-request-failed": "فشل الاتصال بالإنترنت. تحقق من اتصالك وحاول مرة أخرى.",
@@ -34,12 +42,17 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
 
     // General errors
     "auth/internal-error": "حدث خطأ داخلي. يرجى المحاولة لاحقاً.",
-    "auth/operation-not-allowed": "هذه العملية غير مسموح بها حالياً.",
+    "auth/operation-not-allowed": "طريقة تسجيل الدخول هذه غير مفعّلة. قم بتفعيلها من Firebase Console.",
 
     // Default
     "default": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
 };
 
 export function getAuthErrorMessage(errorCode: string): string {
-    return AUTH_ERROR_MESSAGES[errorCode] || AUTH_ERROR_MESSAGES["default"];
+    if (AUTH_ERROR_MESSAGES[errorCode]) {
+        return AUTH_ERROR_MESSAGES[errorCode];
+    }
+    // Include the actual error code for debugging unknown errors
+    console.warn(`Unknown auth error code: ${errorCode}`);
+    return `${AUTH_ERROR_MESSAGES["default"]} (${errorCode})`;
 }
