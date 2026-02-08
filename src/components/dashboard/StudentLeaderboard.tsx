@@ -231,8 +231,8 @@ export function StudentLeaderboard({ circleId }: StudentLeaderboardProps) {
                                         </div>
 
                                         {/* Avatar & Name */}
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12">
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                            <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
                                                 <StudentAvatar
                                                     student={{
                                                         name: student.name,
@@ -245,15 +245,15 @@ export function StudentLeaderboard({ circleId }: StudentLeaderboardProps) {
                                                     className="w-full h-full"
                                                 />
                                             </div>
-                                            <div>
-                                                <h4 className="font-bold text-emerald-deep flex items-center gap-1">
-                                                    {student.name}
+                                            <div className="min-w-0 flex-1">
+                                                <h4 className="font-bold text-emerald-deep text-sm md:text-base whitespace-nowrap truncate flex items-center gap-1">
+                                                    <span className="truncate">{student.name}</span>
                                                     {isCurrentUser && (
-                                                        <span className="text-emerald-500 text-xs">(أنت)</span>
+                                                        <span className="text-emerald-500 text-xs flex-shrink-0">(أنت)</span>
                                                     )}
                                                     <StudentBadge badgeId={student.equippedBadge} size="sm" />
                                                 </h4>
-                                                <p className="text-xs text-text-muted">المستوى المتقدم</p>
+                                                <p className="text-[10px] md:text-xs text-text-muted whitespace-nowrap truncate">المستوى المتقدم</p>
                                             </div>
                                         </div>
                                     </div>
