@@ -200,13 +200,13 @@ export function StudentLeaderboard({ circleId }: StudentLeaderboardProps) {
                     </div>
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
                 {topPerformers.length === 0 ? (
                     <div className="text-center py-8 text-text-muted">
                         <p>لا توجد بيانات كافية لعرض الترتيب</p>
                     </div>
                 ) : (
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-2 gap-2 md:gap-4">
                         {topPerformers.map((student, index) => {
                             const isCurrentUser = student.id === userProfile?.uid;
                             return (

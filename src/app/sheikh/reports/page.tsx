@@ -284,13 +284,13 @@ export default function ReportsPage() {
                                     فرسان الحلقة (الأكثر إنجازاً)
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="p-6">
+                            <CardContent className="p-3 md:p-6">
                                 {stats.topPerformers.length === 0 ? (
                                     <div className="text-center py-8 text-text-muted">
                                         <p>لا توجد بيانات كافية لعرض الترتيب</p>
                                     </div>
                                 ) : (
-                                    <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="grid md:grid-cols-2 gap-2 md:gap-4">
                                         {stats.topPerformers.map((student, index) => (
                                             <Link
                                                 key={student.id}
