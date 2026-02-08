@@ -46,11 +46,13 @@ function MobileHeader() {
             <header className="lg:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
                 <div className="px-4 py-3 flex items-center justify-between">
                     <Link href="/sheikh/dashboard" className="flex items-center gap-2">
-                        <img
-                            src="/logo.png"
-                            alt="حلقتي"
-                            className="w-9 h-9 rounded-lg object-cover"
-                        />
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg overflow-hidden">
+                            <img
+                                src="/logo.png"
+                                alt="حلقتي"
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
                         <div>
                             <span className="font-bold text-emerald-deep dark:text-emerald">حلقتي</span>
                             <span className="text-xs text-gold block">لوحة الشيخ</span>

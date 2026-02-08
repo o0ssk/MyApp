@@ -302,39 +302,39 @@ export default function StudentAttendancePage() {
                     {/* Summary Cards - Exact Reference Design */}
                     <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Present Card */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-3">
+                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center gap-3">
                             <div className="w-12 h-12 bg-emerald-900 rounded-full flex items-center justify-center">
                                 <Check size={24} strokeWidth={3} className="text-white" />
                             </div>
-                            <span className="text-2xl font-bold text-gray-900">{stats.present}</span>
-                            <span className="text-sm text-gray-500 font-medium">حاضر</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white">{stats.present}</span>
+                            <span className="text-sm text-gray-500 dark:text-zinc-400 font-medium">حاضر</span>
                         </div>
 
                         {/* Late Card */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-3">
+                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center gap-3">
                             <div className="w-12 h-12 bg-yellow-600 rounded-full flex items-center justify-center">
                                 <Clock size={24} strokeWidth={3} className="text-white" />
                             </div>
-                            <span className="text-2xl font-bold text-gray-900">{stats.late}</span>
-                            <span className="text-sm text-gray-500 font-medium">متأخر</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white">{stats.late}</span>
+                            <span className="text-sm text-gray-500 dark:text-zinc-400 font-medium">متأخر</span>
                         </div>
 
                         {/* Absent Card */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-3">
+                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center gap-3">
                             <div className="w-12 h-12 bg-rose-600 rounded-full flex items-center justify-center">
                                 <X size={24} strokeWidth={3} className="text-white" />
                             </div>
-                            <span className="text-2xl font-bold text-gray-900">{stats.absent}</span>
-                            <span className="text-sm text-gray-500 font-medium">غائب</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white">{stats.absent}</span>
+                            <span className="text-sm text-gray-500 dark:text-zinc-400 font-medium">غائب</span>
                         </div>
 
                         {/* Excused Card */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-3">
+                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center gap-3">
                             <div className="w-12 h-12 bg-violet-500 rounded-full flex items-center justify-center">
                                 <AlertCircle size={24} strokeWidth={3} className="text-white" />
                             </div>
-                            <span className="text-2xl font-bold text-gray-900">{stats.excused}</span>
-                            <span className="text-sm text-gray-500 font-medium">بعذر</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white">{stats.excused}</span>
+                            <span className="text-sm text-gray-500 dark:text-zinc-400 font-medium">بعذر</span>
                         </div>
                     </motion.div>
 

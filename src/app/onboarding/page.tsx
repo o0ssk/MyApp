@@ -172,11 +172,13 @@ function OnboardingContent() {
                 {/* Logo */}
                 <motion.div variants={fadeUp} className="text-center mb-8">
                     <div className="inline-flex items-center gap-3">
-                        <img
-                            src="/logo.png"
-                            alt="حلقتي"
-                            className="w-14 h-14 rounded-2xl object-cover shadow-lg"
-                        />
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl overflow-hidden">
+                            <img
+                                src="/logo.png"
+                                alt="حلقتي"
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
                         <span className="text-3xl font-bold text-white">حلقتي</span>
                     </div>
                 </motion.div>
@@ -323,10 +325,10 @@ function OnboardingContent() {
                                                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                                                     placeholder="أدخل كود المعلم"
                                                     className={`w-full px-4 py-3 pr-12 bg-sand border rounded-xl text-text placeholder:text-text-muted focus:outline-none focus:ring-2 transition-all font-mono tracking-wider ${codeValidation?.valid
-                                                            ? "border-emerald focus:ring-emerald/50 focus:border-emerald"
-                                                            : codeValidation?.error
-                                                                ? "border-red-400 focus:ring-red-400/50 focus:border-red-400"
-                                                                : "border-border focus:ring-gold/50 focus:border-gold"
+                                                        ? "border-emerald focus:ring-emerald/50 focus:border-emerald"
+                                                        : codeValidation?.error
+                                                            ? "border-red-400 focus:ring-red-400/50 focus:border-red-400"
+                                                            : "border-border focus:ring-gold/50 focus:border-gold"
                                                         }`}
                                                     dir="ltr"
                                                 />

@@ -115,10 +115,10 @@ export function GradientNav() {
                                             : "w-[45px] hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                     )}
                                 >
-                                    {/* BACKGROUND LAYER (Absolute, Fade In/Out) */}
+                                    {/* BACKGROUND LAYER (Absolute, Fade In/Out) - pointer-events-none to allow clicks through */}
                                     <div
                                         className={cn(
-                                            "absolute inset-0 transition-opacity duration-300 ease-in-out",
+                                            "absolute inset-0 transition-opacity duration-300 ease-in-out pointer-events-none",
                                             isActive ? "opacity-100" : "opacity-0"
                                         )}
                                         style={{ background: item.gradient }}

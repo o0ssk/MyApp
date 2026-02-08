@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth, useDashboardRoute } from "@/hooks/useAuth";
 import { buttonMotion } from "@/lib/motion";
 import { LandingCenterNav } from "@/components/layout/LandingCenterNav";
@@ -64,10 +65,13 @@ export default function Navbar() {
                 <div className="flex items-center justify-between">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2">
-                        <img
+                        <Image
                             src="/logo.png"
                             alt="حلقتي"
-                            className="w-10 h-10 rounded-xl object-cover"
+                            width={40}
+                            height={40}
+                            priority
+                            className="h-10 w-10 rounded-xl"
                         />
                         <span className="text-xl font-bold text-emerald dark:text-emerald-400">حلقتي</span>
                     </Link>

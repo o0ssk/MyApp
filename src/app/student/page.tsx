@@ -39,6 +39,7 @@ import { collection, query as firestoreQuery, where, getDocs } from "firebase/fi
 import { db } from "@/lib/firebase/client";
 import { StudentAvatar } from "@/components/ui/StudentAvatar";
 import { StudentBadge } from "@/components/ui/StudentBadge";
+import { StudentLeaderboard } from "@/components/dashboard/StudentLeaderboard";
 
 export default function StudentDashboardPage() {
     const { userProfile } = useAuth();
@@ -308,52 +309,9 @@ export default function StudentDashboardPage() {
                         <StudentHomeCharts data={chartData} isLoading={logsLoading} />
                     </motion.div>
 
-                    {/* Recent Activity */}
+                    {/* Leaderboard - لوحة الصدارة */}
                     <motion.div variants={fadeUp}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-emerald-deep">النشاط الأخير</h2>
-                            <Link href="/app/log">
-                                <Button variant="ghost" size="sm">
-                                    عرض الكل
-                                    <ChevronLeft size={16} />
-                                </Button>
-                            </Link>
-                        </div>
-                        {recentLogs.length === 0 ? (
-                            <Card>
-                                <EmptyState
-                                    icon={<Clock size={32} />}
-                                    title="لا يوجد نشاط بعد"
-                                    description="ابدأ بتسجيل إنجازك اليوم"
-                                    action={{
-                                        label: "تسجيل إنجاز",
-                                        onClick: () => openAddLogModal("memorization"),
-                                    }}
-                                />
-                            </Card>
-                        ) : (
-                            <motion.div variants={staggerContainer} className="space-y-2">
-                                {recentLogs.map((log) => (
-                                    <motion.div key={log.id} variants={listItem}>
-                                        <Card hover className="flex items-center gap-4 p-4">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.type === "memorization" ? "bg-gold/10 text-gold" : "bg-emerald/10 text-emerald"
-                                                }`}>
-                                                {log.type === "memorization" ? <BookOpen size={20} /> : <RotateCcw size={20} />}
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="font-medium text-emerald-deep">
-                                                    {log.type === "memorization" ? "حفظ" : "مراجعة"} {log.amount.pages || 0} صفحة
-                                                </div>
-                                                <div className="text-sm text-text-muted">
-                                                    {new Date(log.createdAt).toLocaleDateString("ar-SA")}
-                                                </div>
-                                            </div>
-                                            <StatusBadge status={log.status} />
-                                        </Card>
-                                    </motion.div>
-                                ))}
-                            </motion.div>
-                        )}
+                        <StudentLeaderboard circleId={activeCircle?.id || null} />
                     </motion.div>
 
                     {/* Floating Add Button */}

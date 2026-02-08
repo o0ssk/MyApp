@@ -25,11 +25,13 @@ export default function Footer() {
                     {/* Brand Column */}
                     <div className="md:col-span-2">
                         <div className="flex items-center gap-2 mb-4">
-                            <img
-                                src="/logo.png"
-                                alt="حلقتي"
-                                className="w-10 h-10 rounded-xl object-cover"
-                            />
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl overflow-hidden">
+                                <img
+                                    src="/logo.png"
+                                    alt="حلقتي"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
                             <span className="text-xl font-bold">حلقتي</span>
                         </div>
                         <p className="text-white/70 leading-relaxed max-w-md">

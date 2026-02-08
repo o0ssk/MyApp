@@ -98,11 +98,13 @@ function LoginContent() {
                 {/* Logo */}
                 <motion.div variants={fadeUp} className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center gap-3">
-                        <img
-                            src="/logo.png"
-                            alt="حلقتي"
-                            className="w-14 h-14 rounded-2xl object-cover shadow-lg"
-                        />
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl overflow-hidden">
+                            <img
+                                src="/logo.png"
+                                alt="حلقتي"
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
                         <span className="text-3xl font-bold text-white">حلقتي</span>
                     </Link>
                 </motion.div>

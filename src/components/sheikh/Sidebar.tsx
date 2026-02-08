@@ -39,11 +39,13 @@ export function Sidebar({ className, onClose }: SidebarProps) {
             {/* Header / Logo */}
             <div className="p-6 border-b border-border flex items-center justify-between">
                 <Link href="/sheikh/dashboard" className="flex items-center gap-3">
-                    <img
-                        src="/logo.png"
-                        alt="حلقتي"
-                        className="w-10 h-10 rounded-xl object-cover"
-                    />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl overflow-hidden">
+                        <img
+                            src="/logo.png"
+                            alt="حلقتي"
+                            className="w-full h-full object-contain"
+                        />
+                    </div>
                     <div>
                         <span className="font-bold text-emerald-deep text-lg block">حلقتي</span>
                         <span className="text-xs text-gold">لوحة الشيخ</span>

@@ -48,11 +48,13 @@ export default function ContactPage() {
                 <div className="max-w-7xl mx-auto px-4 md:px-8">
                     <div className="flex items-center justify-between">
                         <Link href="/" className="flex items-center gap-2">
-                            <img
-                                src="/logo.png"
-                                alt="حلقتي"
-                                className="w-10 h-10 rounded-xl object-cover"
-                            />
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl overflow-hidden">
+                                <img
+                                    src="/logo.png"
+                                    alt="حلقتي"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
                             <span className="text-xl font-bold">حلقتي</span>
                         </Link>
                         <Link

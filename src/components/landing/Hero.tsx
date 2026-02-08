@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { ArrowLeft, Play } from "lucide-react";
 import { useAuth, useDashboardRoute } from "@/hooks/useAuth";
 import { staggerContainer, fadeUp, buttonMotion, scaleUp } from "@/lib/motion";
@@ -136,10 +137,13 @@ export default function Hero() {
                                 {/* Mock Dashboard Header */}
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-3">
-                                        <img
+                                        <Image
                                             src="/logo.png"
                                             alt="حلقتي"
-                                            className="w-10 h-10 rounded-xl object-cover"
+                                            width={40}
+                                            height={40}
+                                            priority
+                                            className="h-10 w-10 rounded-xl"
                                         />
                                         <div>
                                             <div className="font-bold text-emerald-deep dark:text-emerald-400">لوحة التحكم</div>

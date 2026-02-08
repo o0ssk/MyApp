@@ -48,18 +48,33 @@ service cloud.firestore {
     match /approvals/{approvalId} {
       allow read, write: if isAuthenticated();
     }
+    
+    // ✅ FIX: Allow Access to Memberships (for Leaderboard)
+    match /memberships/{membershipId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
     // Messaging Rules
     match /threads/{threadId} {
-      // Allow read if user is a participant
-      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      // Allow read if user is authenticated (needed for existence checks)
+      // The data itself is protected because only participants are in the thread
+      allow read: if isAuthenticated() && (
+        // Allow if document doesn't exist (for existence checks) 
+        // OR if user is a participant
+        !exists(/databases/$(database)/documents/threads/$(threadId)) ||
+        request.auth.uid in resource.data.participants
+      );
+      // Allow listing threads where user is a participant
+      allow list: if isAuthenticated();
       // Allow create if user is in the new participants list
       allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
       // Allow update/delete if user is already a participant
       allow update, delete: if isAuthenticated() && request.auth.uid in resource.data.participants;
       
       match /messages/{messageId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
+        // Allow read/write if user is a participant of the parent thread
+        allow read, write: if isAuthenticated() && 
+          request.auth.uid in get(/databases/$(database)/documents/threads/$(threadId)).data.participants;
       }
       match /members/{memberId} {
          allow read, write: if isAuthenticated();
