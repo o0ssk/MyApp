@@ -109,18 +109,12 @@ export default function Hero() {
                             variants={fadeUp}
                             className="flex flex-wrap gap-8 justify-center lg:justify-start mt-12"
                         >
+
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-emerald">+500</div>
-                                <div className="text-sm text-text-muted">حلقة نشطة</div>
+                                <div className="text-2xl font-bold text-emerald">خير ما تُعطى هو القرآن، وخير ما تَبقى هو الحفظ</div>
+                                <div className="text-x text-text-muted">الثبات على القليل خير من الانقطاع عن الكثير</div>
                             </div>
-                            <div className="text-center">
-                                <div className="text-3xl font-bold text-emerald">+5,000</div>
-                                <div className="text-sm text-text-muted">طالب مسجل</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-3xl font-bold text-emerald">+200</div>
-                                <div className="text-sm text-text-muted">معلم متميز</div>
-                            </div>
+
                         </motion.div>
                     </motion.div>
 
