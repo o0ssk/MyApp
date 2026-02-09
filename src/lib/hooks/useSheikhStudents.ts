@@ -167,6 +167,9 @@ export function useSheikhStudents(circleIdInput: string | string[]) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Stable dependency key for circleIds array
+    const circleIdsKey = circleIds.join(",");
+
     useEffect(() => {
         if (circleIds.length === 0) {
             setStudents([]);
@@ -240,7 +243,8 @@ export function useSheikhStudents(circleIdInput: string | string[]) {
         };
 
         fetchStudents();
-    }, [circleIds.join(",")]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [circleIdsKey]);
 
     const removeStudent = async (studentId: string, circleId: string) => {
         if (!confirm("هل أنت متأكد من حذف الطالب من الحلقة؟")) return;

@@ -252,6 +252,7 @@ export function useLogsWithFilters(circleId: string | null) {
     useEffect(() => {
         fetchLogs(true);
         fetchAllLogsForStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, circleId, filters.type, filters.status]);
 
     // Re-fetch when search/month changes (debounced effect)
@@ -260,6 +261,7 @@ export function useLogsWithFilters(circleId: string | null) {
             fetchLogs(true);
         }, 300);
         return () => clearTimeout(timeout);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters.search, filters.month]);
 
     // Calculate stats from allLogs

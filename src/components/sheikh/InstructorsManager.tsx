@@ -254,7 +254,7 @@ export default function InstructorsManager({ circleId, existingSheikhIds }: Prop
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex flex-col gap-2">
                         <p className="text-sm text-amber-800 flex items-center gap-2">
                             <AlertCircle className="w-4 h-4" />
-                            هذا المستخدم مسجل حالياً كـ "طالب". هل تريد ترقيته ليكون "معلم" وإضافته؟
+                            هذا المستخدم مسجل حالياً كـ &quot;طالب&quot;. هل تريد ترقيته ليكون &quot;معلم&quot; وإضافته؟
                         </p>
                         <Button
                             variant="gold"

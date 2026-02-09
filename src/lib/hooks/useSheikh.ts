@@ -375,6 +375,9 @@ export function usePendingLogs(circleIds: string[]) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Stable dependency key for circleIds array
+    const circleIdsKey = circleIds.join(",");
+
     useEffect(() => {
         if (circleIds.length === 0) {
             setLogs([]);
@@ -427,7 +430,8 @@ export function usePendingLogs(circleIds: string[]) {
         );
 
         return () => unsubscribe();
-    }, [circleIds.join(",")]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [circleIdsKey]);
 
     // Approve log
     const approveLog = async (

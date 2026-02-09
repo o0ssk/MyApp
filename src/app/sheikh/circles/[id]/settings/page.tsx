@@ -210,7 +210,7 @@ export default function CircleSettingsPage() {
                                 منطقة الخطر
                             </h3>
                             <p className="text-sm text-red-600/80 mt-1">
-                                حذف الحلقة سيقوم بإلغاء ارتباط جميع الطلاب بها ونقلهم إلى حالة "غير مسجل". هذا الإجراء لا يمكن التراجع عنه.
+                                حذف الحلقة سيقوم بإلغاء ارتباط جميع الطلاب بها ونقلهم إلى حالة &quot;غير مسجل&quot;. هذا الإجراء لا يمكن التراجع عنه.
                             </p>
                         </div>
                         <Button
@@ -234,7 +234,7 @@ export default function CircleSettingsPage() {
                         <div className="bg-red-50 p-4 rounded-lg flex gap-3 text-red-800 text-sm">
                             <AlertTriangle className="w-5 h-5 shrink-0" />
                             <p>
-                                تحذير: أنت على وشك حذف حلقة <strong>"{circle.name}"</strong>. سيتم إخراج جميع الطلاب منها. هذا الإجراء نهائي.
+                                تحذير: أنت على وشك حذف حلقة <strong>&quot;{circle.name}&quot;</strong>. سيتم إخراج جميع الطلاب منها. هذا الإجراء نهائي.
                             </p>
                         </div>
 

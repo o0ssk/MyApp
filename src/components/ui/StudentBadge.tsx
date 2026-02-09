@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -84,6 +85,12 @@ const SIZE_CLASSES = {
     lg: "w-8 h-8"
 };
 
+const SIZE_PIXELS = {
+    sm: 16,
+    md: 24,
+    lg: 32
+};
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -97,18 +104,18 @@ export function StudentBadge({ badgeId, size = "md", className }: StudentBadgePr
     if (!badgeAsset) return null;
 
     return (
-        <img
+        <Image
             src={badgeAsset}
             alt="Badge"
+            width={SIZE_PIXELS[size]}
+            height={SIZE_PIXELS[size]}
             className={cn(
                 "inline-block object-contain select-none",
                 SIZE_CLASSES[size],
                 className
             )}
-            onError={(e) => {
-                const img = e.target as HTMLImageElement;
+            onError={() => {
                 console.error(`[StudentBadge] Badge image 404 - Path: "${badgeAsset}" | Badge ID: "${badgeId}"`);
-                img.style.display = 'none';
             }}
         />
     );

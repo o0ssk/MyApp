@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { AuthGuard } from "@/lib/auth/guards";
 import { ModeToggleSimple } from "@/components/mode-toggle";
 import { GradientNav } from "@/components/ui/gradient-nav";
@@ -15,9 +16,11 @@ export default function StudentAppLayout({ children }: { children: ReactNode }) 
                     <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
                         <Link href="/student" className="flex items-center gap-2">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg overflow-hidden">
-                                <img
+                                <Image
                                     src="/logo.png"
                                     alt="حلقتي"
+                                    width={36}
+                                    height={36}
                                     className="w-full h-full object-contain"
                                 />
                             </div>

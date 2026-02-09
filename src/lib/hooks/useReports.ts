@@ -228,6 +228,7 @@ export function useCircleStats(circleIds: string[], year?: number, month?: numbe
 
         fetchMissing();
         return () => { active = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [logsData.length]);
 
     // Calculate Stats

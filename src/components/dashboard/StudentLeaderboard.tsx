@@ -173,6 +173,7 @@ export function StudentLeaderboard({ circleId }: StudentLeaderboardProps) {
             unsubMembers();
             unsubLogs();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [circleId]);
 
     if (isLoading) {

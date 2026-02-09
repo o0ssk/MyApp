@@ -249,7 +249,7 @@ export default function MessagesPage() {
                 {/* No Results */}
                 {!isLoading && !error && threads.length > 0 && filteredThreads.length === 0 && (
                     <Card className="text-center py-8">
-                        <p className="text-text-muted">لا توجد نتائج للبحث "{searchQuery}"</p>
+                        <p className="text-text-muted">لا توجد نتائج للبحث &quot;{searchQuery}&quot;</p>
                         <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")} className="mt-2">
                             مسح البحث
                         </Button>

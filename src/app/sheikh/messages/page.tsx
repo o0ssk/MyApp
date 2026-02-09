@@ -80,8 +80,8 @@ export default function SheikhMessagesPage() {
                     <button
                         onClick={() => { setActiveTab("threads"); setSearchQuery(""); }}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === "threads"
-                                ? "bg-emerald text-white"
-                                : "bg-surface border border-border text-text hover:bg-sand"
+                            ? "bg-emerald text-white"
+                            : "bg-surface border border-border text-text hover:bg-sand"
                             }`}
                     >
                         <MessageSquare size={16} />
@@ -96,8 +96,8 @@ export default function SheikhMessagesPage() {
                     <button
                         onClick={() => { setActiveTab("students"); setSearchQuery(""); }}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === "students"
-                                ? "bg-emerald text-white"
-                                : "bg-surface border border-border text-text hover:bg-sand"
+                            ? "bg-emerald text-white"
+                            : "bg-surface border border-border text-text hover:bg-sand"
                             }`}
                     >
                         <UserPlus size={16} />
@@ -185,7 +185,7 @@ export default function SheikhMessagesPage() {
                         {/* No Results */}
                         {threads.length > 0 && filteredThreads.length === 0 && (
                             <Card className="text-center py-8">
-                                <p className="text-text-muted">لا توجد نتائج للبحث "{searchQuery}"</p>
+                                <p className="text-text-muted">لا توجد نتائج للبحث &quot;{searchQuery}&quot;</p>
                                 <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")} className="mt-2">
                                     مسح البحث
                                 </Button>
@@ -229,7 +229,7 @@ export default function SheikhMessagesPage() {
                         {/* No Results */}
                         {students.length > 0 && filteredStudents.length === 0 && (
                             <Card className="text-center py-8">
-                                <p className="text-text-muted">لا توجد نتائج للبحث "{searchQuery}"</p>
+                                <p className="text-text-muted">لا توجد نتائج للبحث &quot;{searchQuery}&quot;</p>
                                 <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")} className="mt-2">
                                     مسح البحث
                                 </Button>
