@@ -17,6 +17,10 @@ export const metadata: Metadata = {
     keywords: ["حلقات", "قرآن", "تحفيظ", "حلقتي", "إسلام", "تعليم"],
     authors: [{ name: "Halqati Team" }],
     manifest: "/manifest.json",
+    icons: {
+        icon: "/logo.png",
+        apple: "/logo.png",
+    },
     appleWebApp: {
         capable: true,
         statusBarStyle: "black-translucent",
