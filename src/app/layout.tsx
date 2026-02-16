@@ -1,14 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/hooks";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/components/theme-provider";
+import { NotificationManager } from "@/components/NotificationManager";
+
+export const viewport: Viewport = {
+    themeColor: "#10B981",
+    maximumScale: 1,
+    userScalable: false,
+};
 
 export const metadata: Metadata = {
     title: "حلقتي | منصة حلقات القرآن الكريم",
     description: "منصتكم المتكاملة لإدارة حلقات تحفيظ القرآن الكريم. تتبع الحفظ، إدارة الطلاب، والتواصل الفعال بين الشيخ والطلاب.",
     keywords: ["حلقات", "قرآن", "تحفيظ", "حلقتي", "إسلام", "تعليم"],
     authors: [{ name: "Halqati Team" }],
+    manifest: "/manifest.json",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "black-translucent",
+        title: "حلقتي",
+    },
     openGraph: {
         title: "حلقتي | منصة حلقات القرآن الكريم",
         description: "منصتكم المتكاملة لإدارة حلقات تحفيظ القرآن الكريم",
@@ -33,6 +46,7 @@ export default function RootLayout({
                 >
                     <AuthProvider>
                         <ToastProvider>
+                            <NotificationManager />
                             {children}
                         </ToastProvider>
                     </AuthProvider>
